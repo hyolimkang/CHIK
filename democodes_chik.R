@@ -88,9 +88,34 @@ for(i in 1:length(paramEstimates)){
 paramDat = data.frame(paramVector,varOutput)
 
 ##creating datasets for plotting 
-ager=0:80
-numSamples = 1000
+## Sample from mcmc chains for credible intervals
+## Add binomial sampling uncertainty
 
-foiVector <- paramVector[1:3]
-foiEstimates = paramEstimates[1:3]
+## 1. Sample from mcmc chain to get 95% credible intervals (model uncertainty)
+ager1=14:42
+ager2=5:85
+ager3=15:49
+
+numSamples = 1000
+outDf_1 <- matrix(NA, nrow=numSamples, ncol= length(ager1))
+outDf_2 <- matrix(NA, nrow=numSamples, ncol= length(ager2))
+outDf_3 <- matrix(NA, nrow=numSamples, ncol= length(ager3))
+
+for (i in 1:numSamples ) {
+  randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+  
+  lambda1Sample <- mcmcMatrix[randomNumber, "lambda_1"]
+  lambda2Sample <- mcmcMatrix[randomNumber, "lambda_2"]
+  lambda3Sample <- mcmcMatrix[randomNumber, "lambda_3"]
+  
+  newRow_1 <- 1-exp(-lambda1Sample*ager1)
+  newRow_2 <- 1-exp(-lambda2Sample*ager2)
+  newRow_3 <- 1-exp(-lambda3Sample*ager3)
+  
+    outDf_1[i,] <- newRow_1
+    outDf_2[i,] <- newRow_2
+    outDf_3[i,] <- newRow_3
+    
+  }
+
 
