@@ -35,7 +35,7 @@ jcode <- "model{
     n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
     seropos_est[i] = 1-exp(-lambda_2*age[i]) #catalytic model
 	}
-		for (i in 8:10){
+	for (i in 8:10){
     n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
     seropos_est[i] = 1-exp(-lambda_3*age[i]) #catalytic model
 		}
@@ -86,3 +86,11 @@ for(i in 1:length(paramEstimates)){
 }
 
 paramDat = data.frame(paramVector,varOutput)
+
+##creating datasets for plotting 
+ager=0:80
+numSamples = 1000
+
+foiVector <- paramVector[1:3]
+foiEstimates = paramEstimates[1:3]
+
