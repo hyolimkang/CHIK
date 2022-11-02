@@ -96,10 +96,38 @@ ager1=14:42
 ager2=5:85
 ager3=15:49
 
+ageComb <- c(ager1, ager2, ager3)
+ageComb[1: length(ager1)]
+ageComb[30: length(ager2)]
+
+
+
 numSamples = 1000
 outDf_1 <- matrix(NA, nrow=numSamples, ncol= length(ager1))
 outDf_2 <- matrix(NA, nrow=numSamples, ncol= length(ager2))
 outDf_3 <- matrix(NA, nrow=numSamples, ncol= length(ager3))
+
+# 50% values  
+foiEstimates_1 = paramEstimates[[1]]
+foiEstimates_1 <- data.frame(foiEstimates_1)
+lambda_1 <- foiEstimates_1[1,]
+foiEstimates_2 = paramEstimates[[2]]
+foiEstimates_2 <- data.frame(foiEstimates_2)
+lambda_2 <- foiEstimates_2[1,]
+foiEstimates_3 = paramEstimates[[3]]
+foiEstimates_3 <- data.frame(foiEstimates_3)
+lambda_3 <- foiEstimates_3[1,]
+
+meanLambda1 <- 1-exp(-lambda_1*ager1)
+meanLambda2 <- 1-exp(-lambda_2*ager2)
+meanLambda3 <- 1-exp(-lambda_3*ager3)
+
+mean <- c(meanLambda1, meanLambda2, meanLambda3)
+
+#create multiple dataframes 
+for (i in 1:length(df_chik$study)) {
+  assign(paste0("outDf_", matrix(NA, nrow=numSamples, ncol = length(ager1))))
+}
 
 for (i in 1:numSamples ) {
   randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
@@ -115,7 +143,63 @@ for (i in 1:numSamples ) {
     outDf_1[i,] <- newRow_1
     outDf_2[i,] <- newRow_2
     outDf_3[i,] <- newRow_3
-    
   }
 
+quantileMatrix_1 <- matrix(NA,nrow=ncol(outDf_1), ncol = 3)
+for(jj in 1:ncol(outDf_1)){
+  quantiles <- outDf_1[,jj] %>% quantile(probs=c(.5,.025,.975))
+  quantileMatrix_1[jj,] <- quantiles
+}
 
+quantileMatrix_2 <- matrix(NA,nrow=ncol(outDf_2), ncol = 3)
+for(jj in 1:ncol(outDf_2)){
+  quantiles <- outDf_2[,jj] %>% quantile(probs=c(.5,.025,.975))
+  quantileMatrix_2[jj,] <- quantiles
+}
+
+quantileMatrix_3 <- matrix(NA,nrow=ncol(outDf_3), ncol = 3)
+for(jj in 1:ncol(outDf_3)){
+  quantiles <- outDf_3[,jj] %>% quantile(probs=c(.5,.025,.975))
+  quantileMatrix_3[jj,] <- quantiles
+}
+
+# Create a dataframe for plotting 
+## how can i loop over df_upperLower_1~N ?
+df_upperLower_1 = data.frame(
+  midpoint = ager1,
+  mean = meanLambda1,
+  upper = quantileMatrix_1[,3],
+  lower = quantileMatrix_1[,2]
+)
+
+df_upperLower_2 = data.frame(
+  midpoint = ager2,
+  mean = meanLambda2,
+  upper = quantileMatrix_2[,3],
+  lower = quantileMatrix_2[,2]) 
+
+df_upperLower_3 = data.frame(
+  midpoint = ager3,
+  mean = meanLambda3,
+  upper = quantileMatrix_3[,3],
+  lower = quantileMatrix_3[,2]) 
+
+# for loop for dataframes 
+numbs <- data.frame(c(1:3))
+
+for(i in 1:3) {
+  assign(paste0("df_upperLower_" , numbs[i,]), "NA")
+}
+
+for(i in 1:3) {
+  assign(paste0("df_upperLower_" , numbs[i,]), data.frame(
+    midpoint = ageComb[i],
+    mean = meanLambda1,
+    upper = quantileMatrix_1[,3],
+    lower = quantileMatrix_1[,2]
+  ))
+}
+
+
+
+  
