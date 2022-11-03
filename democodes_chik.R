@@ -66,6 +66,8 @@ jpos_matrix <- as.matrix(jpos)
 jpos_array <- coda::as.array.mcmc.list(jpos,chains = TRUE)
 MCMCsummary(jpos, round = 2)
 
+# calculate DIC 
+dic.samples(jmod, n.iter = mcmc.length)
 
 ######################
 ##  Point Estimates
@@ -102,9 +104,6 @@ ageComb[30: length(ager2)]
 
 
 numSamples = 1000
-outDf_1 <- matrix(NA, nrow=numSamples, ncol= length(ager1))
-outDf_2 <- matrix(NA, nrow=numSamples, ncol= length(ager2))
-outDf_3 <- matrix(NA, nrow=numSamples, ncol= length(ager3))
 
 # 50% values  
 foiEstimates_1 = paramEstimates[[1]]
@@ -126,28 +125,43 @@ mean <- c(meanLambda1, meanLambda2, meanLambda3)
 #create multiple dataframes 
 numbs <- data.frame(c(1:3))
 
-## for loop for multiple age ranges?? 
+## for loop for multiple age ranges
 
-#for (i in 1:length(df_chik$study)) {
-#  assign(paste0("outDf_", numbs[i,]), matrix(NA, nrow=numSamples, ncol = length(ager1)))
-# }
+ages <- list(ager1, ager2, ager3)
+
+  for(i in 1: length(ages)) {
+  assign(paste0("outDf_", i), matrix(NA, nrow=numSamples, ncol = length(ages[[i]])))
+  }
 
 
-assign(paste0("outDf_", 1), matrix(NA, nrow=numSamples, ncol = length(ager1)))
-assign(paste0("outDf_", 2), matrix(NA, nrow=numSamples, ncol = length(ager2)))
-assign(paste0("outDf_", 3), matrix(NA, nrow=numSamples, ncol = length(ager3)))
-
+# Solution 2 using Lapply
+#ll <- lapply(list(ager1, ager2, ager3),  
+#             function(x) matrix(ncol=length(x),nrow=numSamples))
+#list_data <- Map(as.data.frame, ll)
 
 for (i in 1:numSamples ) {
   randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
   
-  lambda1Sample <- mcmcMatrix[randomNumber, "lambda_1"]
-  lambda2Sample <- mcmcMatrix[randomNumber, "lambda_2"]
-  lambda3Sample <- mcmcMatrix[randomNumber, "lambda_3"]
+  # loop through lambdaSamples 
   
-  newRow_1 <- 1-exp(-lambda1Sample*ager1)
-  newRow_2 <- 1-exp(-lambda2Sample*ager2)
-  newRow_3 <- 1-exp(-lambda3Sample*ager3)
+  lambdas <- list("lambda_1", "lambda_2", "lambda_3")
+  
+  for (i in 1:3) {
+      assign(paste0("lambdaSample_", i), mcmcMatrix[randomNumber, lambdas[[i]]])
+  }
+
+  # loop through outputting  
+  
+  lambSamplist <- list("lambdaSample_1", "lambdaSample_2", "lambdaSample_3")
+  
+ 
+  # for (i in 1:3) {
+  #  assign(paste0("newRow_", i), 1-exp(-lambSamplist[[i]]*ages[[i]]))
+  # }
+  
+  newRow_1 <- 1-exp(-lambdaSample_1*ager1)
+  newRow_2 <- 1-exp(-lambdaSample_2*ager2)
+  newRow_3 <- 1-exp(-lambdaSample_3*ager3)
   
     outDf_1[i,] <- newRow_1
     outDf_2[i,] <- newRow_2
@@ -195,18 +209,18 @@ df_upperLower_3 = data.frame(
 
 # for loop for dataframes 
 
-for(i in 1:3) {
-  assign(paste0("df_upperLower_" , numbs[i,]), "NA")
-}
+#for(i in 1:3) {
+#  assign(paste0("df_upperLower_" , numbs[i,]), "NA")
+#}
 
-for(i in 1:3) {
-  assign(paste0("df_upperLower_" , numbs[i,]), data.frame(
-    midpoint = ageComb[i],
-    mean = meanLambda1,
-    upper = quantileMatrix_1[,3],
-    lower = quantileMatrix_1[,2]
-  ))
-}
+#for(i in 1:3) {
+#  assign(paste0("df_upperLower_" , numbs[i,]), data.frame(
+#    midpoint = ageComb[i],
+#    mean = meanLambda1,
+#    upper = quantileMatrix_1[,3],
+#    lower = quantileMatrix_1[,2]
+#  ))
+# }
 
 ############################################################
 ## Plots
