@@ -232,5 +232,26 @@ ggplot()+
   xlab("Age (years)") + ylab("Proportion Seropositive")
 
 
+Foi1<-data.frame(transpose(foiEstimates_1))
+Foi1$country <- c("C1")
+Foi2<-data.frame(transpose(foiEstimates_2))
+Foi2$country <- c("C2")
+Foi3<-data.frame(transpose(foiEstimates_3))
+Foi3$country <- c("C3")
 
+# FOI estiamtes 
+ggplot()+
+  geom_errorbar(data = Foi1, aes(x   = country,
+                                 ymin= foiEstimates_1.1,
+                                 ymax= foiEstimates_1.2),
+                color = "#558C8C")+
+  geom_errorbar(data = Foi2, aes(x   = country,
+                                 ymin= foiEstimates_2.1,
+                                 ymax= foiEstimates_2.2),
+                color = "#C05746")+
+  geom_errorbar(data = Foi3, aes(x   = country,
+                                 ymin= foiEstimates_3.1,
+                                 ymax= foiEstimates_3.2),
+                color = "#075E9D")
+  
 
