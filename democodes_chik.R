@@ -7,7 +7,6 @@ library(dplyr)
 library(varhandle)
 require(MCMCvis)
 library(cowplot)
-library(Rsero)
 
 ##Read file
 chik_systematic_review_v1 <- read_excel("~/Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/1.Aim1/all_countries/chik_systematic_review_v1.xlsx", 
@@ -15,7 +14,7 @@ chik_systematic_review_v1 <- read_excel("~/Library/CloudStorage/OneDrive-LondonS
 #Rename data
 df_chik = chik_systematic_review_v1 
 
-df_chik[,c("mid","lo","hi")] = binom.confint(df_chik$N.pos, df_chik$N, method="exact")[,c("mean","lower","upper")]
+df_chik[,c("midpoint","lower","upper")] = binom.confint(df_chik$N.pos, df_chik$N, method="exact")[,c("mean","lower","upper")]
 
 df_chik <-  df_chik %>% 
   dplyr::mutate(agemid = (age_min+age_max)/2)
@@ -125,9 +124,19 @@ meanLambda3 <- 1-exp(-lambda_3*ager3)
 mean <- c(meanLambda1, meanLambda2, meanLambda3)
 
 #create multiple dataframes 
-for (i in 1:length(df_chik$study)) {
-  assign(paste0("outDf_", matrix(NA, nrow=numSamples, ncol = length(ager1))))
-}
+numbs <- data.frame(c(1:3))
+
+## for loop for multiple age ranges?? 
+
+#for (i in 1:length(df_chik$study)) {
+#  assign(paste0("outDf_", numbs[i,]), matrix(NA, nrow=numSamples, ncol = length(ager1)))
+# }
+
+
+assign(paste0("outDf_", 1), matrix(NA, nrow=numSamples, ncol = length(ager1)))
+assign(paste0("outDf_", 2), matrix(NA, nrow=numSamples, ncol = length(ager2)))
+assign(paste0("outDf_", 3), matrix(NA, nrow=numSamples, ncol = length(ager3)))
+
 
 for (i in 1:numSamples ) {
   randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
@@ -166,26 +175,25 @@ for(jj in 1:ncol(outDf_3)){
 # Create a dataframe for plotting 
 ## how can i loop over df_upperLower_1~N ?
 df_upperLower_1 = data.frame(
-  midpoint = ager1,
+  agemid = ager1,
   mean = meanLambda1,
   upper = quantileMatrix_1[,3],
   lower = quantileMatrix_1[,2]
 )
 
 df_upperLower_2 = data.frame(
-  midpoint = ager2,
+  agemid = ager2,
   mean = meanLambda2,
   upper = quantileMatrix_2[,3],
   lower = quantileMatrix_2[,2]) 
 
 df_upperLower_3 = data.frame(
-  midpoint = ager3,
+  agemid = ager3,
   mean = meanLambda3,
   upper = quantileMatrix_3[,3],
   lower = quantileMatrix_3[,2]) 
 
 # for loop for dataframes 
-numbs <- data.frame(c(1:3))
 
 for(i in 1:3) {
   assign(paste0("df_upperLower_" , numbs[i,]), "NA")
@@ -200,6 +208,29 @@ for(i in 1:3) {
   ))
 }
 
+############################################################
+## Plots
+############################################################
 
 
-  
+ggplot()+
+  geom_line(data = df_upperLower_2, aes(x=agemid, y=mean), color = "#558C8C")+
+  geom_ribbon(data = df_upperLower_2, alpha=0.2, aes(x=agemid, y=mean, ymin=lower, ymax=upper), fill = "#558C8C")+
+  geom_point(data = datS2, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+  geom_linerange(data = datS2, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+ ### data 2 
+  geom_line(data = df_upperLower_1, aes(x=agemid, y=mean),color = "#C05746")+
+  geom_ribbon(data = df_upperLower_1, alpha=0.2, aes(x=agemid, y=mean, ymin=lower, ymax=upper),fill = "#C05746")+
+  geom_point(data = datS1, aes(x=agemid, y=midpoint),color = "#C05746")+
+  geom_linerange(data = datS1, aes(x=agemid, ymin=lower, ymax=upper),color = "#C05746")+  ## data 1
+  geom_line(data = df_upperLower_3, aes(x=agemid, y=mean),color = "#075E9D")+
+  geom_ribbon(data = df_upperLower_3, alpha=0.2, aes(x=agemid, y=mean, ymin=lower, ymax=upper),fill = "#075E9D")+
+  geom_point(data = datS3, aes(x=agemid, y=midpoint),color = "#075E9D")+
+  geom_linerange(data = datS3, aes(x=agemid, ymin=lower, ymax=upper),color = "#075E9D")+   ## data 3 
+  theme_bw()+
+  scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+  ylim(0, 1)+
+  xlab("Age (years)") + ylab("Proportion Seropositive")
+
+
+
+
