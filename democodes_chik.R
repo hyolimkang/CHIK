@@ -239,19 +239,25 @@ Foi2$country <- c("C2")
 Foi3<-data.frame(transpose(foiEstimates_3))
 Foi3$country <- c("C3")
 
-# FOI estiamtes 
+# FOI estiamtes bars
 ggplot()+
   geom_errorbar(data = Foi1, aes(x   = country,
                                  ymin= foiEstimates_1.1,
                                  ymax= foiEstimates_1.2),
-                color = "#558C8C")+
+                color = "#558C8C", width = 0.1)+
+  geom_point(data = Foi1, aes(x=country, y=foiEstimates_1),color = "#558C8C")+
   geom_errorbar(data = Foi2, aes(x   = country,
                                  ymin= foiEstimates_2.1,
                                  ymax= foiEstimates_2.2),
-                color = "#C05746")+
+                color = "#C05746", width = 0.1)+
+  geom_point(data = Foi2, aes(x=country, y=foiEstimates_2),color = "#C05746")+
   geom_errorbar(data = Foi3, aes(x   = country,
                                  ymin= foiEstimates_3.1,
                                  ymax= foiEstimates_3.2),
-                color = "#075E9D")
+                color = "#075E9D", width = 0.1) +
+  geom_point(data = Foi3, aes(x=country, y=foiEstimates_3),color = "#075E9D")+
+  xlab("Country") + ylab("Force of Infection") +
+  theme_bw()
+
   
 
