@@ -11,8 +11,6 @@ library(cowplot)
 ##Read file
 chik_systematic_review_v1 <- read_excel("~/Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/1.Aim1/all_countries/chik_systematic_review_v1.xlsx", 
                                         sheet = "prac")
-chik_systematic_review_v1 <- read_excel("C:/Users/Hyolim/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/chik_systematic_review_v1.xlsx", 
-                                        sheet = "prac")
 
 #Rename data
 df_chik = chik_systematic_review_v1 
@@ -143,20 +141,36 @@ a <- ll_long %>% bind_rows() %>% mutate(name=as.numeric(gsub("V","",name))) %>% 
   
 # loop through lambdaSamples 
   
-  lambda1Sample <- mcmcMatrix[randomNumber, "lambda_1"]
-  lambda2Sample <- mcmcMatrix[randomNumber, "lambda_2"]
-  lambda3Sample <- mcmcMatrix[randomNumber, "lambda_3"]
-
+  lambdas <- list("lambda_1", "lambda_2", "lambda_3")
+  
+  for(j in 1:3) {
+    assign(paste0("lambdaSample_", j), mcmcMatrix[randomNumber, lambdas[[j]]])
+  }
+  
 # loop through outputting  
 
-  newRow_1 <- 1-exp(-lambda1Sample*ager1)
-  newRow_2 <- 1-exp(-lambda2Sample*ager2)
-  newRow_3 <- 1-exp(-lambda3Sample*ager3)
+  newRow_1 <- 1-exp(-lambdaSample_1*ager1)
+  newRow_2 <- 1-exp(-lambdaSample_2*ager2)
+  newRow_3 <- 1-exp(-lambdaSample_3*ager3)
   
+  
+  for(ii in 1:3) {
+    assign(paste0("lambdaSamples_", ii), mcmcMatrix[sample(nrow(mcmcMatrix), numSamples, replace=T), 
+                                lambdas[[ii]]])
+  }
+  
+    outDf_1 <- 1 - exp(-lambdaSamples_1 %*% t(ager1))
+    outDf_2 <- 1 - exp(-lambdaSamples_2 %*% t(ager2))
+    outDf_3 <- 1 - exp(-lambdaSamples_3 %*% t(ager3))
 
-    outDf_1[i,] <- newRow_1
-    outDf_2[i,] <- newRow_2
-    outDf_3[i,] <- newRow_3
+  for(k in 1:3) {
+    
+    lapply(1: length(lambdaSamples1), function(x) 1-exp(-lambdaSamples1[[x]]*ages[[k]]))
+  }
+  
+    #outDf_1[i,] <- newRow_1
+    #outDf_2[i,] <- newRow_2
+    #outDf_3[i,] <- newRow_3
   }
 
 quantileMatrix_1 <- matrix(NA,nrow=ncol(outDf_1), ncol = 3)
