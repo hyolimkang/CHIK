@@ -7,6 +7,7 @@ library(dplyr)
 library(varhandle)
 require(MCMCvis)
 library(cowplot)
+library(rlist)
 
 ##Read file
 chik_systematic_review_v1 <- read_excel("~/Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/1.Aim1/all_countries/chik_systematic_review_v1.xlsx", 
@@ -126,6 +127,7 @@ ages <- list(ager1, ager2, ager3)
   assign(paste0("outDf_", i), matrix(NA, nrow=numSamples, ncol = length(ages[[i]])))
   }
 
+
 # store results into a long-format lists using lapply function
 ll_age=list(age1=14:42, age2=5:85, age3=15:49)
 ll_long = lapply(1:length(ll_age),
@@ -135,55 +137,79 @@ ll_long = lapply(1:length(ll_age),
 # convert to a single dataframe, with age in a new column
 a <- ll_long %>% bind_rows() %>% mutate(name=as.numeric(gsub("V","",name))) %>% rowwise() %>% mutate(agegroup=ll_age[[index]][name] )
 
-# generate ramdomNmber for credible interval
 
-  randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
-  
 # loop through lambdaSamples 
-  
-  lambda1Sample <- mcmcMatrix[randomNumber, "lambda_1"]
-  lambda2Sample <- mcmcMatrix[randomNumber, "lambda_2"]
-  lambda3Sample <- mcmcMatrix[randomNumber, "lambda_3"]
-  
   
   lambdas <- list("lambda_1", "lambda_2", "lambda_3")
   
-  for (i in 1:3) {
-      assign(paste0("lambdaSample_", i), mcmcMatrix[randomNumber, lambdas[[i]]])
-  }
-
-# loop through outputting  
-  
-  lambSamplist <- list("lambdaSample_1", "lambdaSample_2", "lambdaSample_3")
-  
-
-  newRow_1 <- 1-exp(-lambda1Sample*ager1)
-  newRow_2 <- 1-exp(-lambda2Sample*ager2)
-  newRow_3 <- 1-exp(-lambda3Sample*ager3)
+  # 1000 random Lambadas for dataset 1
   
   for (i in 1:numSamples) {
     
-    outDf_1[i,] <- newRow_1
-    outDf_2[i,] <- newRow_2
-    outDf_3[i,] <- newRow_3
-  }
+      # generate ramdomNumber for credible interval
+    
+      randomNumber <- floor(runif(numSamples, min = 1, max = nrow(mcmcMatrix)))
+      
+        assign(paste0("lambdaSample1_", i), mcmcMatrix[randomNumber[[i]], lambdas[[1]]])
+      }
+  
+  # 1000 random Lambadas for dataset 2
+  
+  for (i in 1:numSamples) {
+    
+    # generate ramdomNumber for credible interval
+    
+    randomNumber <- floor(runif(numSamples, min = 1, max = nrow(mcmcMatrix)))
+    
+    assign(paste0("lambdaSample2_", i), mcmcMatrix[randomNumber[[i]], lambdas[[2]]])
+    }
+
+  
+  # 1000 random Lambadas for dataset 3
+  
+  lambdaSamples1 <- lapply(
+    floor(runif(numSamples, min = 1, max = nrow(mcmcMatrix))),
+    function(x) mcmcMatrix[x, lambdas[[1]]])
+  
+  lambdaSamples2 <- lapply(
+    floor(runif(numSamples, min = 1, max = nrow(mcmcMatrix))),
+    function(x) mcmcMatrix[x, lambdas[[2]]]
+  )
+
+  lambdaSamples3 <- lapply(
+    floor(runif(numSamples, min = 1, max = nrow(mcmcMatrix))),
+    function(x) mcmcMatrix[x, lambdas[[3]]]
+  )
+    
+# loop through outputting  
+  
+  lambdalist1 <- lapply(1: length(lambdaSamples1), function(x) 1-exp(-lambdaSamples1[[x]]*ager1))
+  lambdalist2 <- lapply(1: length(lambdaSamples2), function(x) 1-exp(-lambdaSamples1[[x]]*ager2))
+  lambdalist3 <- lapply(1: length(lambdaSamples3), function(x) 1-exp(-lambdaSamples1[[x]]*ager3))
+  
+  outDf_1 <- do.call(rbind, lambdalist1)
+  outDf_2 <- do.call(rbind, lambdalist2)
+  outDf_3 <- do.call(rbind, lambdalist3)
+  
+
+# Quantile matrix
 
 quantileMatrix_1 <- matrix(NA,nrow=ncol(outDf_1), ncol = 3)
 for(jj in 1:ncol(outDf_1)){
-  quantiles <- outDf_1[,jj] %>% quantile(probs=c(.5,.025,.975))
-  quantileMatrix_1[jj,] <- quantiles
+  quantiles_1 <- outDf_1[,jj] %>% quantile(probs=c(.5,.025,.975))
+  quantileMatrix_1[jj,] <- quantiles_1
 }
 
 quantileMatrix_2 <- matrix(NA,nrow=ncol(outDf_2), ncol = 3)
 for(jj in 1:ncol(outDf_2)){
-  quantiles <- outDf_2[,jj] %>% quantile(probs=c(.5,.025,.975))
-  quantileMatrix_2[jj,] <- quantiles
+  quantiles_2 <- outDf_2[,jj] %>% quantile(probs=c(.5,.025,.975))
+  quantileMatrix_2[jj,] <- quantiles_2
 }
 
 quantileMatrix_3 <- matrix(NA,nrow=ncol(outDf_3), ncol = 3)
 for(jj in 1:ncol(outDf_3)){
-  quantiles <- outDf_3[,jj] %>% quantile(probs=c(.5,.025,.975))
-  quantileMatrix_3[jj,] <- quantiles
+  quantiles_3 <- outDf_3[,jj] %>% quantile(probs=c(.5,.025,.975))
+  quantileMatrix_3[jj,] <- quantiles_3
 }
 
 # Create a dataframe for plotting 
