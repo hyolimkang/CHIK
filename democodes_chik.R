@@ -137,32 +137,23 @@ a <- ll_long %>% bind_rows() %>% mutate(name=as.numeric(gsub("V","",name))) %>% 
 
 # generate ramdomNmber for credible interval
 
-  randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+  for(i in 1:numSamples) {
+
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
   
 # loop through lambdaSamples 
   
   lambda1Sample <- mcmcMatrix[randomNumber, "lambda_1"]
   lambda2Sample <- mcmcMatrix[randomNumber, "lambda_2"]
   lambda3Sample <- mcmcMatrix[randomNumber, "lambda_3"]
-  
-  
-  lambdas <- list("lambda_1", "lambda_2", "lambda_3")
-  
-  for (i in 1:3) {
-      assign(paste0("lambdaSample_", i), mcmcMatrix[randomNumber, lambdas[[i]]])
-  }
 
 # loop through outputting  
-  
-  lambSamplist <- list("lambdaSample_1", "lambdaSample_2", "lambdaSample_3")
-  
 
   newRow_1 <- 1-exp(-lambda1Sample*ager1)
   newRow_2 <- 1-exp(-lambda2Sample*ager2)
   newRow_3 <- 1-exp(-lambda3Sample*ager3)
   
-  for (i in 1:numSamples) {
-    
+
     outDf_1[i,] <- newRow_1
     outDf_2[i,] <- newRow_2
     outDf_3[i,] <- newRow_3
