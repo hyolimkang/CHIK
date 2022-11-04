@@ -139,39 +139,23 @@ a <- ll_long %>% bind_rows() %>% mutate(name=as.numeric(gsub("V","",name))) %>% 
 
     randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
   
-# loop through lambdaSamples 
-  
-  lambdas <- list("lambda_1", "lambda_2", "lambda_3")
-  
-  for(j in 1:3) {
-    assign(paste0("lambdaSample_", j), mcmcMatrix[randomNumber, lambdas[[j]]])
-  }
-  
-# loop through outputting  
+# outputting  
 
-  newRow_1 <- 1-exp(-lambdaSample_1*ager1)
-  newRow_2 <- 1-exp(-lambdaSample_2*ager2)
-  newRow_3 <- 1-exp(-lambdaSample_3*ager3)
-  
-  
   for(ii in 1:3) {
+    
+    lambdas <- list("lambda_1", "lambda_2", "lambda_3")
+    
     assign(paste0("lambdaSamples_", ii), mcmcMatrix[sample(nrow(mcmcMatrix), numSamples, replace=T), 
                                 lambdas[[ii]]])
   }
-  
+
     outDf_1 <- 1 - exp(-lambdaSamples_1 %*% t(ager1))
     outDf_2 <- 1 - exp(-lambdaSamples_2 %*% t(ager2))
     outDf_3 <- 1 - exp(-lambdaSamples_3 %*% t(ager3))
 
-  for(k in 1:3) {
-    
-    lapply(1: length(lambdaSamples1), function(x) 1-exp(-lambdaSamples1[[x]]*ages[[k]]))
   }
-  
-    #outDf_1[i,] <- newRow_1
-    #outDf_2[i,] <- newRow_2
-    #outDf_3[i,] <- newRow_3
-  }
+
+# get quantile matrices 
 
 quantileMatrix_1 <- matrix(NA,nrow=ncol(outDf_1), ncol = 3)
 for(jj in 1:ncol(outDf_1)){
@@ -195,37 +179,23 @@ for(jj in 1:ncol(outDf_3)){
 ## how can i loop over df_upperLower_1~N ?
 df_upperLower_1 = data.frame(
   agemid = ager1,
-  mean = meanLambda1,
+  mean = quantileMatrix_1[,1],
   upper = quantileMatrix_1[,3],
   lower = quantileMatrix_1[,2]
 )
 
 df_upperLower_2 = data.frame(
   agemid = ager2,
-  mean = meanLambda2,
+  mean = quantileMatrix_2[,1],
   upper = quantileMatrix_2[,3],
   lower = quantileMatrix_2[,2]) 
 
 df_upperLower_3 = data.frame(
   agemid = ager3,
-  mean = meanLambda3,
+  mean = quantileMatrix_3[,1],
   upper = quantileMatrix_3[,3],
   lower = quantileMatrix_3[,2]) 
 
-# for loop for dataframes 
-
-#for(i in 1:3) {
-#  assign(paste0("df_upperLower_" , numbs[i,]), "NA")
-#}
-
-#for(i in 1:3) {
-#  assign(paste0("df_upperLower_" , numbs[i,]), data.frame(
-#    midpoint = ageComb[i],
-#    mean = meanLambda1,
-#    upper = quantileMatrix_1[,3],
-#    lower = quantileMatrix_1[,2]
-#  ))
-# }
 
 ############################################################
 ## Plots
