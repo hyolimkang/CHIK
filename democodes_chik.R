@@ -161,41 +161,31 @@ quantileMatrix_1 <- matrix(NA,nrow=ncol(outDf_1), ncol = 3)
 for(jj in 1:ncol(outDf_1)){
   quantiles <- outDf_1[,jj] %>% quantile(probs=c(.5,.025,.975))
   quantileMatrix_1[jj,] <- quantiles
+  df_upperLower_1 <- cbind(ager1, quantileMatrix_1)
+  df_upperLower_1 <- as.data.frame(df_upperLower_1)
+  colnames(df_upperLower_1) <- c('agemid', 'mean', 'upper', 'lower')
+  
 }
 
 quantileMatrix_2 <- matrix(NA,nrow=ncol(outDf_2), ncol = 3)
 for(jj in 1:ncol(outDf_2)){
   quantiles <- outDf_2[,jj] %>% quantile(probs=c(.5,.025,.975))
   quantileMatrix_2[jj,] <- quantiles
+  df_upperLower_2 <- cbind(ager2, quantileMatrix_2)
+  df_upperLower_2 <- as.data.frame(df_upperLower_2)
+  colnames(df_upperLower_2) <- c('agemid', 'mean', 'upper', 'lower')
+  
 }
 
 quantileMatrix_3 <- matrix(NA,nrow=ncol(outDf_3), ncol = 3)
 for(jj in 1:ncol(outDf_3)){
   quantiles <- outDf_3[,jj] %>% quantile(probs=c(.5,.025,.975))
   quantileMatrix_3[jj,] <- quantiles
+  df_upperLower_3 <- cbind(ager3, quantileMatrix_3)
+  df_upperLower_3 <- as.data.frame(df_upperLower_3)
+  colnames(df_upperLower_3) <- c('agemid', 'mean', 'upper', 'lower')
+  
 }
-
-# Create a dataframe for plotting 
-## how can i loop over df_upperLower_1~N ?
-df_upperLower_1 = data.frame(
-  agemid = ager1,
-  mean = quantileMatrix_1[,1],
-  upper = quantileMatrix_1[,3],
-  lower = quantileMatrix_1[,2]
-)
-
-df_upperLower_2 = data.frame(
-  agemid = ager2,
-  mean = quantileMatrix_2[,1],
-  upper = quantileMatrix_2[,3],
-  lower = quantileMatrix_2[,2]) 
-
-df_upperLower_3 = data.frame(
-  agemid = ager3,
-  mean = quantileMatrix_3[,1],
-  upper = quantileMatrix_3[,3],
-  lower = quantileMatrix_3[,2]) 
-
 
 ############################################################
 ## Plots

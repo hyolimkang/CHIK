@@ -7,7 +7,6 @@ library(dplyr)
 library(varhandle)
 require(MCMCvis)
 library(cowplot)
-library(rlist)
 
 ##Read file
 chik_systematic_review_v1 <- read_excel("~/Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/1.Aim1/all_countries/chik_systematic_review_v1.xlsx", 
@@ -216,20 +215,20 @@ for(jj in 1:ncol(outDf_3)){
 ## how can i loop over df_upperLower_1~N ?
 df_upperLower_1 = data.frame(
   agemid = ager1,
-  mean = meanLambda1,
+  mean = quantileMatrix_1[,1],
   upper = quantileMatrix_1[,3],
   lower = quantileMatrix_1[,2]
 )
 
 df_upperLower_2 = data.frame(
   agemid = ager2,
-  mean = meanLambda2,
+  mean = quantileMatrix_2[,1],
   upper = quantileMatrix_2[,3],
   lower = quantileMatrix_2[,2]) 
 
 df_upperLower_3 = data.frame(
   agemid = ager3,
-  mean = meanLambda3,
+  mean = quantileMatrix_3[,1],
   upper = quantileMatrix_3[,3],
   lower = quantileMatrix_3[,2]) 
 
