@@ -121,9 +121,9 @@ mean <- c(meanLambda1, meanLambda2, meanLambda3)
 
 ages <- list(ager1, ager2, ager3)
 
-  for(i in 1: length(ages)) {
+for(i in 1: length(ages)) {
   assign(paste0("outDf_", i), matrix(NA, nrow=numSamples, ncol = length(ages[[i]])))
-  }
+}
 
 # store results into a long-format lists using lapply function
 ll_age=list(age1=14:42, age2=5:85, age3=15:49)
@@ -136,21 +136,21 @@ a <- ll_long %>% bind_rows() %>% mutate(name=as.numeric(gsub("V","",name))) %>% 
 
 # generate ramdomNmber for credible interval
 
-  for(i in 1:numSamples) {
-
-# outputting  
-    for(ii in 1:3) {
+for(i in 1:numSamples) {
+  
+  # outputting  
+  for(ii in 1:3) {
     
     lambdas <- list("lambda_1", "lambda_2", "lambda_3")
     
     assign(paste0("lambdaSamples_", ii), mcmcMatrix[sample(nrow(mcmcMatrix), numSamples, replace=T), 
-                                lambdas[[ii]]])
-
+                                                    lambdas[[ii]]])
+    
   }
-    outDf_1 <- 1 - exp(-lambdaSamples_1 %*% t(ager1))
-    outDf_2 <- 1 - exp(-lambdaSamples_2 %*% t(ager2))
-    outDf_3 <- 1 - exp(-lambdaSamples_3 %*% t(ager3))
-  }
+  outDf_1 <- 1 - exp(-lambdaSamples_1 %*% t(ager1))
+  outDf_2 <- 1 - exp(-lambdaSamples_2 %*% t(ager2))
+  outDf_3 <- 1 - exp(-lambdaSamples_3 %*% t(ager3))
+}
 
 # get quantile matrices 
 
@@ -235,5 +235,5 @@ ggplot()+
   xlab("Country") + ylab("Force of Infection") +
   theme_bw()
 
-  
+
 
