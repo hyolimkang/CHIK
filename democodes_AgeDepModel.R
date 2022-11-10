@@ -1,3 +1,4 @@
+###simple catalytic model
 library(readxl)
 require(tidyverse)
 require(rjags)
@@ -10,55 +11,111 @@ library(cowplot)
 library(Rsero)
 
 ##Read file
-library(readxl)
-chik_systematic_review_v1 <- read_excel("Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/1.Aim1/all_countries/chik_systematic_review_v1.xlsx", 
+chik_systematic_review_v1 <- read_excel("~/Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/1.Aim1/all_countries/chik_systematic_review_v1.xlsx", 
+                                        sheet = "prac")
+chik_systematic_review_v1 <- read_excel("C:/Users/Hyolim/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/chik_systematic_review_v1.xlsx", 
                                         sheet = "Sheet1")
-View(chik_systematic_review_v1)
+
 #Rename data
 df_chik = chik_systematic_review_v1 
+
+df_chik[,c("midpoint","lower","upper")] = binom.confint(df_chik$N.pos, df_chik$N, method="exact")[,c("mean","lower","upper")]
 
 df_chik <-  df_chik %>% 
   dplyr::mutate(agemid = (age_min+age_max)/2) %>% filter(study == 4)
 
-df_chik[,c("midpoint","lower","upper")] = binom.confint(df_chik$N.pos, df_chik$N, method="exact")[,c("mean","lower","upper")]
-
+#sub-setting datafiles by study
+datS1 <- df_chik[df_chik$study == "1",]
+datS2 <- df_chik[df_chik$study == "2",]
+datS3 <- df_chik[df_chik$study == "3",]
 
 # Define model
 jcode <- "model{ 
-	for (i in 1:1){
+	for (i in 1:length(N)){
     n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
-    seropos_est[i] = 1-exp(-10*lambda_1*age[i]) #catalytic model
+    seropos_est[i] <- ifelse(age[i] < cutoff, 
+    1-exp(-lambda_1*age[i]),
+    1-((exp(-lambda_1*cutoff))*(exp((-lambda_2*(age[i]-cutoff))))))
+
 	}
-	for (i in 2:2){
+		
+	#  prior dists
+  lambda_1 ~ dunif(0,1) #uninformative prior
+  lambda_2 ~ dunif(0,1) #uninformative prior
+  cutoff   ~ dunif(0,30) #uninformative prior
+
+}"
+
+
+# ifelse(<condition>, <yes>, ifelse(<condition>, <yes>, <no>))
+# https://stackoverflow.com/questions/18012222/nested-ifelse-statement
+# ifelse(<condition>, <yes>, ifelse<condition>, <yes>, ifelse(<condition>, <yes>, <no>))
+
+
+jcode <- "model{ 
+	for (i in 1:length(N)){
     n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
-    seropos_est[i] = 1-exp(-20*lambda_1*age[i] - 10*lambda_2*age[i]) #catalytic model
+    seropos_est[i] <- ifelse(age[i] < 20, 1-exp(-lambda_1*age[i]), 
+    ifelse(age[i]>20 && age[i]<40, 
+    1-((exp(-lambda_1*20))*(exp((-lambda_2*(age[i]-20))))), 
+    1-((exp(-lambda_2*40))*(exp((-lambda_3*(age[i]-60)))))))
 	}
-	for (i in 3:3){
+		
+	#  prior dists
+  lambda_1 ~ dunif(0,1) #uninformative prior
+  lambda_2 ~ dunif(0,1) #uninformative prior
+  lambda_3 ~ dunif(0,1) #uninformative prior
+
+}"
+
+jcode <- "model{ 
+	for (i in 1:length(N)){
     n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
-    seropos_est[i] = 1-exp(-20*lambda_1*age[i] - 20*lambda_2*age[i] - 10*lambda_3*age[i]) #catalytic model
+    seropos_est[i] <- ifelse(age[i] < 20, 1-exp(-lambda_1*age[i]), 
+    ifelse(age[i]>20 && age[i]<40, 
+    1-((exp(-lambda_1*20))*(exp((-lambda_2*(age[i]-20))))), 
+    ifelse(age[i]>40 && age[i]<60, 
+    1-((exp(-lambda_2*40))*(exp((-lambda_3*(age[i]-60))))), 
+    1-((exp(-lambda_3*60))*(exp((-lambda_4*(age[i]-80)))))))
 	}
-	for (i in 4:4){
-		n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
-    seropos_est[i] = 1-exp(-20*lambda_1*age[i] - 20*lambda_2*age[i] - 20*lambda_3*age[i] - 10*lambda_4*age[i]) #catalytic model
-		}
+		
 	#  prior dists
   lambda_1 ~ dunif(0,1) #uninformative prior
   lambda_2 ~ dunif(0,1) #uninformative prior
   lambda_3 ~ dunif(0,1) #uninformative prior
   lambda_4 ~ dunif(0,1) #uninformative prior
+
 }"
 
-#vector 
-paramVector <- c("lambda_1", "lambda_2", "lambda_3")
+jcode <- "model{ 
+	for (i in 1:length(N)){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] <- ifelse(age[i] < 20, 1-exp(-lambda_1*age[i]), 
+       ifelse(age[i]>20 && age[i]<40, 1-((exp(-lambda_1*20))*(exp((-lambda_2*(age[i]-20))))), 
+              ifelse(age[i]>40 && age[i]<60, 
+                     1-((exp(-lambda_2*40))*(exp((-lambda_3*(age[i]-60))))), 
+                                             1-((exp(-lambda_3*60))*(exp((-lambda_4*(age[i]-80))))))
+       )
+)
+	}
+		
+	#  prior dists
+  lambda_1 ~ dunif(0,1) #uninformative prior
+  lambda_2 ~ dunif(0,1) #uninformative prior
+  lambda_3 ~ dunif(0,1) #uninformative prior
+  lambda_4 ~ dunif(0,1) #uninformative prior
+
+}"
+
 
 # Run model
 mcmc.length=50000
 jdat = list(n.pos= df_chik$N.pos,
             N=df_chik$N,
             age=df_chik$agemid)
-jmod = jags.model(textConnection(jcode), data=jdat, n.chains=1, n.adapt = 15000)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
 update(jmod, 500)
-jpos = coda.samples(jmod, paramVector , n.iter=mcmc.length)
+jpos = coda.samples(jmod, c("lambda_1", "lambda_2", "lambda_3"), n.iter=mcmc.length)
 plot(jpos) # check convergence
 
 summary(jpos) 
@@ -96,10 +153,9 @@ paramDat = data.frame(paramVector,varOutput)
 ## Add binomial sampling uncertainty
 
 ## 1. Sample from mcmc chain to get 95% credible intervals (model uncertainty)
-ager1=14:42
-ager2=5:85
-ager3=15:49
-numSamples = 1000
+ager=1:80
+cutoffPointEst <- mcmcMatrix[,"cutoff"] %>% quantile(probs=c(.5,.025,.975))
+cutoff = floor(cutoffPointEst[[1]])
 
 # 50% values  
 foiEstimates_1 = paramEstimates[[1]]
@@ -137,53 +193,32 @@ a <- ll_long %>% bind_rows() %>% mutate(name=as.numeric(gsub("V","",name))) %>% 
 
 # generate ramdomNmber for credible interval
 
-for(i in 1:numSamples) {
+for(ii in 1:length(paramVector)) {
   
-  # outputting  
-  for(ii in 1:3) {
+  outDf <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+  
+  for (kk in 1:numSamples ) {
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
     
-    lambdas <- list("lambda_1", "lambda_2", "lambda_3")
+    lambdaSample <- mcmcMatrix[randomNumber,"lambda"]
     
-    assign(paste0("lambdaSamples_", ii), mcmcMatrix[sample(nrow(mcmcMatrix), numSamples, replace=T), 
-                                                    lambdas[[ii]]])
+    newRow <-  1 - exp(-lambdaSample * (ager))
     
+    outDf[kk,] <- newRow
   }
-  outDf_1 <- 1 - exp(-lambdaSamples_1 %*% t(ager1))
-  outDf_2 <- 1 - exp(-lambdaSamples_2 %*% t(ager2))
-  outDf_3 <- 1 - exp(-lambdaSamples_3 %*% t(ager3))
 }
-
 # get quantile matrices 
 
-quantileMatrix_1 <- matrix(NA,nrow=ncol(outDf_1), ncol = 3)
-for(jj in 1:ncol(outDf_1)){
-  quantiles <- outDf_1[,jj] %>% quantile(probs=c(.5,.025,.975))
+quantileMatrix_1 <- matrix(NA,nrow=ncol(outDf), ncol = 3)
+for(jj in 1:ncol(outDf)){
+  quantiles <- outDf[,jj] %>% quantile(probs=c(.5,.025,.975))
   quantileMatrix_1[jj,] <- quantiles
-  df_upperLower_1 <- cbind(ager1, quantileMatrix_1)
+  df_upperLower_1 <- cbind(ager, quantileMatrix_1)
   df_upperLower_1 <- as.data.frame(df_upperLower_1)
   colnames(df_upperLower_1) <- c('agemid', 'mean', 'upper', 'lower')
   
 }
 
-quantileMatrix_2 <- matrix(NA,nrow=ncol(outDf_2), ncol = 3)
-for(jj in 1:ncol(outDf_2)){
-  quantiles <- outDf_2[,jj] %>% quantile(probs=c(.5,.025,.975))
-  quantileMatrix_2[jj,] <- quantiles
-  df_upperLower_2 <- cbind(ager2, quantileMatrix_2)
-  df_upperLower_2 <- as.data.frame(df_upperLower_2)
-  colnames(df_upperLower_2) <- c('agemid', 'mean', 'upper', 'lower')
-  
-}
-
-quantileMatrix_3 <- matrix(NA,nrow=ncol(outDf_3), ncol = 3)
-for(jj in 1:ncol(outDf_3)){
-  quantiles <- outDf_3[,jj] %>% quantile(probs=c(.5,.025,.975))
-  quantileMatrix_3[jj,] <- quantiles
-  df_upperLower_3 <- cbind(ager3, quantileMatrix_3)
-  df_upperLower_3 <- as.data.frame(df_upperLower_3)
-  colnames(df_upperLower_3) <- c('agemid', 'mean', 'upper', 'lower')
-  
-}
 
 ############################################################
 ## Plots
@@ -191,18 +226,10 @@ for(jj in 1:ncol(outDf_3)){
 
 
 ggplot()+
-  geom_line(data = df_upperLower_2, aes(x=agemid, y=mean), color = "#558C8C")+
-  geom_ribbon(data = df_upperLower_2, alpha=0.2, aes(x=agemid, y=mean, ymin=lower, ymax=upper), fill = "#558C8C")+
-  geom_point(data = datS2, aes(x=agemid, y=midpoint), color = "#558C8C")+  
-  geom_linerange(data = datS2, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+ ### data 2 
-  geom_line(data = df_upperLower_1, aes(x=agemid, y=mean),color = "#C05746")+
-  geom_ribbon(data = df_upperLower_1, alpha=0.2, aes(x=agemid, y=mean, ymin=lower, ymax=upper),fill = "#C05746")+
-  geom_point(data = datS1, aes(x=agemid, y=midpoint),color = "#C05746")+
-  geom_linerange(data = datS1, aes(x=agemid, ymin=lower, ymax=upper),color = "#C05746")+  ## data 1
-  geom_line(data = df_upperLower_3, aes(x=agemid, y=mean),color = "#075E9D")+
-  geom_ribbon(data = df_upperLower_3, alpha=0.2, aes(x=agemid, y=mean, ymin=lower, ymax=upper),fill = "#075E9D")+
-  geom_point(data = datS3, aes(x=agemid, y=midpoint),color = "#075E9D")+
-  geom_linerange(data = datS3, aes(x=agemid, ymin=lower, ymax=upper),color = "#075E9D")+   ## data 3 
+  geom_line(data = df_upperLower_1, aes(x=agemid, y=mean), color = "#558C8C")+
+  geom_ribbon(data = df_upperLower_1, alpha=0.2, aes(x=agemid, y=mean, ymin=lower, ymax=upper), fill = "#558C8C")+
+  geom_point(data = df_chik, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+  geom_linerange(data = df_chik, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+ ### data 2 
   theme_bw()+
   scale_x_continuous(breaks = seq(0, 100, by = 10)) +
   ylim(0, 1)+

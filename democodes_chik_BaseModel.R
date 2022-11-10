@@ -10,42 +10,41 @@ library(cowplot)
 library(Rsero)
 
 ##Read file
-library(readxl)
-chik_systematic_review_v1 <- read_excel("Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/1.Aim1/all_countries/chik_systematic_review_v1.xlsx", 
-                                        sheet = "Sheet1")
-View(chik_systematic_review_v1)
+chik_systematic_review_v1 <- read_excel("~/Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/1.Aim1/all_countries/chik_systematic_review_v1.xlsx", 
+                                        sheet = "prac")
+
 #Rename data
 df_chik = chik_systematic_review_v1 
 
-df_chik <-  df_chik %>% 
-  dplyr::mutate(agemid = (age_min+age_max)/2) %>% filter(study == 4)
-
 df_chik[,c("midpoint","lower","upper")] = binom.confint(df_chik$N.pos, df_chik$N, method="exact")[,c("mean","lower","upper")]
 
+df_chik <-  df_chik %>% 
+  dplyr::mutate(agemid = (age_min+age_max)/2)
+
+#sub-setting datafiles by study
+datS1 <- df_chik[df_chik$study == "1",]
+datS2 <- df_chik[df_chik$study == "2",]
+datS3 <- df_chik[df_chik$study == "3",]
 
 # Define model
 jcode <- "model{ 
-	for (i in 1:1){
+	for (i in 1:3){
     n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
-    seropos_est[i] = 1-exp(-10*lambda_1*age[i]) #catalytic model
+    seropos_est[i] = 1-exp(-lambda_1*age[i]) #catalytic model
 	}
-	for (i in 2:2){
+	for (i in 4:7){
     n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
-    seropos_est[i] = 1-exp(-20*lambda_1*age[i] - 10*lambda_2*age[i]) #catalytic model
+    seropos_est[i] = 1-exp(-lambda_2*age[i]) #catalytic model
 	}
-	for (i in 3:3){
+	for (i in 8:10){
     n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
-    seropos_est[i] = 1-exp(-20*lambda_1*age[i] - 20*lambda_2*age[i] - 10*lambda_3*age[i]) #catalytic model
-	}
-	for (i in 4:4){
-		n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
-    seropos_est[i] = 1-exp(-20*lambda_1*age[i] - 20*lambda_2*age[i] - 20*lambda_3*age[i] - 10*lambda_4*age[i]) #catalytic model
+    seropos_est[i] = 1-exp(-lambda_3*age[i]) #catalytic model
 		}
 	#  prior dists
   lambda_1 ~ dunif(0,1) #uninformative prior
   lambda_2 ~ dunif(0,1) #uninformative prior
   lambda_3 ~ dunif(0,1) #uninformative prior
-  lambda_4 ~ dunif(0,1) #uninformative prior
+  
 }"
 
 #vector 
@@ -56,7 +55,7 @@ mcmc.length=50000
 jdat = list(n.pos= df_chik$N.pos,
             N=df_chik$N,
             age=df_chik$agemid)
-jmod = jags.model(textConnection(jcode), data=jdat, n.chains=1, n.adapt = 15000)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
 update(jmod, 500)
 jpos = coda.samples(jmod, paramVector , n.iter=mcmc.length)
 plot(jpos) # check convergence
@@ -122,9 +121,9 @@ mean <- c(meanLambda1, meanLambda2, meanLambda3)
 
 ages <- list(ager1, ager2, ager3)
 
-for(i in 1: length(ages)) {
+  for(i in 1: length(ages)) {
   assign(paste0("outDf_", i), matrix(NA, nrow=numSamples, ncol = length(ages[[i]])))
-}
+  }
 
 # store results into a long-format lists using lapply function
 ll_age=list(age1=14:42, age2=5:85, age3=15:49)
@@ -137,21 +136,21 @@ a <- ll_long %>% bind_rows() %>% mutate(name=as.numeric(gsub("V","",name))) %>% 
 
 # generate ramdomNmber for credible interval
 
-for(i in 1:numSamples) {
-  
-  # outputting  
-  for(ii in 1:3) {
+  for(i in 1:numSamples) {
+
+# outputting  
+    for(ii in 1:3) {
     
     lambdas <- list("lambda_1", "lambda_2", "lambda_3")
     
     assign(paste0("lambdaSamples_", ii), mcmcMatrix[sample(nrow(mcmcMatrix), numSamples, replace=T), 
-                                                    lambdas[[ii]]])
-    
+                                lambdas[[ii]]])
+
   }
-  outDf_1 <- 1 - exp(-lambdaSamples_1 %*% t(ager1))
-  outDf_2 <- 1 - exp(-lambdaSamples_2 %*% t(ager2))
-  outDf_3 <- 1 - exp(-lambdaSamples_3 %*% t(ager3))
-}
+    outDf_1 <- 1 - exp(-lambdaSamples_1 %*% t(ager1))
+    outDf_2 <- 1 - exp(-lambdaSamples_2 %*% t(ager2))
+    outDf_3 <- 1 - exp(-lambdaSamples_3 %*% t(ager3))
+  }
 
 # get quantile matrices 
 
@@ -236,5 +235,5 @@ ggplot()+
   xlab("Country") + ylab("Force of Infection") +
   theme_bw()
 
-
+  
 
