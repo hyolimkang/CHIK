@@ -115,7 +115,7 @@ jdat = list(n.pos= df_chik$N.pos,
             age=df_chik$agemid)
 jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
 update(jmod, 500)
-jpos = coda.samples(jmod, c("lambda_1", "lambda_2", "lambda_3"), n.iter=mcmc.length)
+jpos = coda.samples(jmod, c("lambda_1", "lambda_2", "lambda_3", "lambda_4"), n.iter=mcmc.length)
 plot(jpos) # check convergence
 
 summary(jpos) 
@@ -135,8 +135,9 @@ dic.samples(jmod, n.iter = mcmc.length)
 lambda1PointEst <- mcmcMatrix[,"lambda_1"] %>% quantile(probs=c(.5,.025,.975))
 lambda2PointEst <- mcmcMatrix[,"lambda_2"] %>% quantile(probs=c(.5,.025,.975))
 lambda3PointEst <- mcmcMatrix[,"lambda_3"] %>% quantile(probs=c(.5,.025,.975))
+lambda4PointEst <- mcmcMatrix[,"lambda_4"] %>% quantile(probs=c(.5,.025,.975))
 
-paramEstimates <- list(lambda1PointEst, lambda2PointEst, lambda3PointEst)
+paramEstimates <- list(lambda1PointEst, lambda2PointEst, lambda3PointEst, lambda4PointEst)
 
 ### Outputting point estimates for inclusion within tables
 
@@ -192,21 +193,36 @@ ll_long = lapply(1:length(ll_age),
 a <- ll_long %>% bind_rows() %>% mutate(name=as.numeric(gsub("V","",name))) %>% rowwise() %>% mutate(agegroup=ll_age[[index]][name] )
 
 # generate ramdomNmber for credible interval
+ager= 1:80
+
+paramVector <- c("lambda_1", "lambda_2", "lambda_3", "lambda_4")
 
 for(ii in 1:length(paramVector)) {
   
-  outDf <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+  outDf <- matrix(NA,nrow=numSamples, ncol = length(ager))
   
   for (kk in 1:numSamples ) {
     randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+  
+    lambdaSample_1 <- mcmcMatrix[randomNumber,"lambda_1"]
+    lambdaSample_2 <- mcmcMatrix[randomNumber,"lambda_2"]
+    lambdaSample_3 <- mcmcMatrix[randomNumber,"lambda_3"]
+    lambdaSample_4 <- mcmcMatrix[randomNumber,"lambda_4"]
     
-    lambdaSample <- mcmcMatrix[randomNumber,"lambda"]
     
-    newRow <-  1 - exp(-lambdaSample * (ager))
+    newRow <-  ifelse(ager < 20, 1-exp(-lambdaSample_1*ager), 
+                      ifelse(ager>20 && age4<40, 1-((exp(-lambdaSample_1*20))*(exp((-lambdaSample_2*(ager-20))))), 
+                             ifelse(ager>40 && ager<60, 
+                                    1-((exp(-lambdaSample_2*40))*(exp((-lambdaSample_3*(ager-60))))), 
+                                    1-((exp(-lambdaSample_3*60))*(exp((-lambdaSample_4*(ager-80))))))
+                      )
+    )
     
     outDf[kk,] <- newRow
   }
 }
+
+
 # get quantile matrices 
 
 quantileMatrix_1 <- matrix(NA,nrow=ncol(outDf), ncol = 3)
