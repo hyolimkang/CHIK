@@ -12,7 +12,7 @@ library(Rsero)
 ##Read file
 library(readxl)
 chik_systematic_review_v1 <- read_excel("Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/1.Aim1/all_countries/chik_systematic_review_v1.xlsx", 
-                                        sheet = "Sheet1")
+                                        sheet = "prac")
 View(chik_systematic_review_v1)
 
 chik_systematic_review_v1 <- read_excel("C:/Users/Hyolim/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/chik_systematic_review_v1.xlsx", 
@@ -27,19 +27,8 @@ df_chik[,c("midpoint","lower","upper")] = binom.confint(df_chik$N.pos, df_chik$N
 
 
 # Define model
-jcode <- "model{ 
-	for (i in 1:length(N)){
-    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
-    seropos_est[i] = 1-exp(-(lambda_1*(age[i]-(survey[i]-delta)) + lambda_2*(survey[i]-delta))) # time-varying catalytic model
-	}
 
-	#  prior dists
-  lambda_1 ~ dunif(0,1)    #uninformative prior
-  lambda_2 ~ dunif(0,1)    #uninformative prior
-  delta    ~ dunif(1939,2018) #uninformative prior
-}"
-
-# discrete FOI model (estimate time point where FOI changes)
+# discrete FOI model (estimate time point where FOI changes: 1 time change)
 jcode <- "model{ 
 	for (i in 1:length(N)){
     n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
@@ -54,8 +43,46 @@ jcode <- "model{
   delta    ~ dunif(1939,2018) #uninformative prior
 }"
 
+# discrete FOI model (estimate time point where FOI changes: 2 time changes)
+jcode <- "model{ 
+	for (i in 1:length(N)){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i]>(survey[i]-delta1), 1-exp(-(lambda_1*(age[i]-(survey[i]-delta1)) + lambda_2*(delta2-delta1) + lambda_3*(survey[i]-delta2)))
+       , ifelse(age[i]<survey[i]-delta2, 1-exp(-lambda_3*age[i]), 1-exp(-(lambda_2*(age[i]-(survey[i]-delta2)) + lambda_3*(survey[i]-delta2)))))
+    # time-varying catalytic model
+	}
+
+	#  prior dists
+  lambda_1 ~ dunif(0,1)       #uninformative prior
+  lambda_2 ~ dunif(0,1)       #uninformative prior
+  lambda_3 ~ dunif(0,1)       #uninformative prior
+  delta1  ~ dunif(1939,2018)  #uninformative prior
+  delta2  ~ dunif(1939,2018)  #uninformative prior
+
+}"
+
+jcode <- "model{ 
+	for (i in 1:length(N)){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i]>(survey[i]-delta1), 1-exp(-(lambda_1*(age[i]-(survey[i]-delta1)) + lambda_2*(delta2-delta1) + lambda_3*(survey[i]-delta2)))
+       , ifelse(age[i]>survey[i]-delta2 && age[i]<survey[i]-delta1, 1-exp(-(lambda_2*(age[i]-(survey[i]-delta2)) + lambda_3*(survey[i]-delta2))),
+       1-exp(-lambda_3*age[i])))
+    # time-varying catalytic model
+	}
+
+	#  prior dists
+  lambda_1 ~ dunif(0,1)       #uninformative prior
+  lambda_2 ~ dunif(0,1)       #uninformative prior
+  lambda_3 ~ dunif(0,1)       #uninformative prior
+  delta1  ~ dunif(1939,2018)  #uninformative prior
+  delta2  ~ dunif(1939,2018)  #uninformative prior
+
+}"
+
+
 #vector 
 paramVector <- c("lambda_1", "lambda_2", "delta")
+paramVector1 <- c("lambda_1", "lambda_2", "lambda_3", "delta1", "delta2")
 
 # Run model
 mcmc.length=50000
@@ -63,9 +90,9 @@ jdat = list(n.pos  = df_chik$N.pos,
             N      = df_chik$N,
             age    = df_chik$agemid,
             survey = df_chik$survey)
-jmod = jags.model(textConnection(jcode), data=jdat, n.chains=1, n.adapt = 15000)
-update(jmod, 500)
-jpos = coda.samples(jmod, paramVector , n.iter=mcmc.length)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=5, n.adapt = 15000)
+update(jmod, 1000)
+jpos = coda.samples(jmod, paramVector1, n.iter=mcmc.length)
 plot(jpos) # check convergence
 
 summary(jpos) 
@@ -84,9 +111,11 @@ dic.samples(jmod, n.iter = mcmc.length)
 ####################
 lambda1PointEst <- mcmcMatrix[,"lambda_1"] %>% quantile(probs=c(.5,.025,.975))
 lambda2PointEst <- mcmcMatrix[,"lambda_2"] %>% quantile(probs=c(.5,.025,.975))
-deltaPointEst   <- mcmcMatrix[,"delta"]    %>% quantile(probs=c(.5,.025,.975))
+lambda3PointEst <- mcmcMatrix[,"lambda_3"] %>% quantile(probs=c(.5,.025,.975))
+delta1PointEst   <- mcmcMatrix[,"delta1"] %>% quantile(probs=c(.5,.025,.975))
+delta2PointEst   <- mcmcMatrix[,"delta2"] %>% quantile(probs=c(.5,.025,.975))
 
-paramEstimates <- list(lambda1PointEst, lambda2PointEst, lambda3PointEst)
+paramEstimates <- list(lambda1PointEst, lambda2PointEst, lambda3PointEst,delta1PointEst, delta2PointEst)
 
 ### Outputting point estimates for inclusion within tables
 
@@ -116,12 +145,12 @@ lambda_2 <- foiEstimates_2[1,]
 foiEstimates_3 = paramEstimates[[3]]
 foiEstimates_3 <- data.frame(foiEstimates_3)
 lambda_3 <- foiEstimates_3[1,]
-
-meanLambda1 <- 1-exp(-lambda_1*ager1)
-meanLambda2 <- 1-exp(-lambda_2*ager2)
-meanLambda3 <- 1-exp(-lambda_3*ager3)
-
-mean <- c(meanLambda1, meanLambda2, meanLambda3)
+delta1Estimates = paramEstimates[[4]]
+delta1Estimates <- data.frame(delta1Estimates)
+delta1 <- floor(delta1Estimates[1,])
+delta2Estimates = paramEstimates[[5]]
+delta2Estimates <- data.frame(delta2Estimates)
+delta2 <- floor(delta2Estimates[1,])
 
 ## for loop multiple age ranges
 
@@ -140,7 +169,7 @@ ll_long = lapply(1:length(ll_age),
 # convert to a single dataframe, with age in a new column
 a <- ll_long %>% bind_rows() %>% mutate(name=as.numeric(gsub("V","",name))) %>% rowwise() %>% mutate(agegroup=ll_age[[index]][name] )
 
-# generate ramdomNmber for credible interval
+# generate ramdomNmber for credible interval (for 1 point change)
 
 for(ii in 1:length(paramVector)) {
   
@@ -160,6 +189,27 @@ for(ii in 1:length(paramVector)) {
   }
 }
 
+# generate ramdomNmber for credible interval (for 2 point changes)
+
+for(ii in 1:length(paramVector)) {
+  
+  outDf <- matrix(NA,nrow=numSamples, ncol = length(ager))
+  
+  for (kk in 1:numSamples) {
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+    
+    lambdaSample_1 <- mcmcMatrix[randomNumber,"lambda_1"]
+    lambdaSample_2 <- mcmcMatrix[randomNumber,"lambda_2"]
+    lambdaSample_3 <- mcmcMatrix[randomNumber,"lambda_3"]
+    deltaSample1    <- mcmcMatrix[randomNumber,"delta1"]
+    deltaSample2    <- mcmcMatrix[randomNumber,"delta2"]
+    
+    
+    newRow <-  ifelse(ager>(2018-deltaSample1), 1-exp(-(lambdaSample_1*(ager-(2018-deltaSample1)) + lambdaSample_2*(deltaSample2-deltaSample1) + lambdaSample_3*(2018-deltaSample2)))
+                      , ifelse(ager<2018-deltaSample2, 1-exp(-lambdaSample_3*ager), 1-exp(-(lambdaSample_2*(ager-(2018-deltaSample2)) + lambdaSample_3*(2018-deltaSample2)))))
+    outDf[kk,] <- newRow
+  }
+}
 
 # get quantile matrices 
 
@@ -190,11 +240,11 @@ ggplot()+
 
 
 Foi1<-data.frame(transpose(foiEstimates_1))
-Foi1$country <- c("C1")
+Foi1$year <- c("1938-2006")
 Foi2<-data.frame(transpose(foiEstimates_2))
-Foi2$country <- c("C2")
+Foi2$year <- c("2006-2009")
 Foi3<-data.frame(transpose(foiEstimates_3))
-Foi3$country <- c("C3")
+Foi3$year <- c("2009-2018")
 
 # FOI estiamtes bars
 ggplot()+
@@ -213,7 +263,7 @@ ggplot()+
                                  ymax= foiEstimates_3.2),
                 color = "#075E9D", width = 0.1) +
   geom_point(data = Foi3, aes(x=country, y=foiEstimates_3),color = "#075E9D")+
-  xlab("Country") + ylab("Force of Infection") +
+  xlab("Year") + ylab("Force of Infection") +
   theme_bw()
 
 
