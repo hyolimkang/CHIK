@@ -7,7 +7,8 @@ library(dplyr)
 library(varhandle)
 require(MCMCvis)
 library(cowplot)
-library(Rsero)
+
+options(scipen=999)
 
 ##Read file
 library(readxl)
@@ -80,19 +81,74 @@ jcode <- "model{
 }"
 
 
+# yearly variation in FoI
+jcode <- "model{ 
+	for (i in 1:length(N)){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i]>1 && age[i]<20, 1-exp(-lambda1)
+       ,ifelse(age[i]>20 && age[i]<40, 1-exp(-(lambda1+lambda2)),
+       1-exp(-(lambda1+lambda2+lambda3))))
+    # time-varying catalytic model
+	}
+
+	#  prior dists
+  lambda1 ~ dunif(0,1)       #uninformative prior
+  lambda2 ~ dunif(0,1)       #uninformative prior
+  lambda3 ~ dunif(0,1)       #uninformative prior
+}"
+
+# yearly
+jcode <- "model{ 
+	for (i in 1:length(N)){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i]>1 && age[i]<20, 1-exp(-lambda1)
+       ,ifelse(age[i]>20 && age[i]<40, 1-exp(-(lambda1+lambda2)),
+       ifelse(age[i]>40 && age[i]<60, 1-exp(-(lambda1+lambda2+lambda3)),
+       1-exp(-(lambda1+lambda2+lambda3+lambda4)))))
+    # time-varying catalytic model
+	}
+
+	#  prior dists
+  lambda1 ~ dunif(0,1)       #uninformative prior
+  lambda2 ~ dunif(0,1)       #uninformative prior
+  lambda3 ~ dunif(0,1)       #uninformative prior
+  lambda4 ~ dunif(0,1)       #uninformative prior
+
+}"
+
+# quan tran's paper model
+jcode <- "model{ 
+	for (i in 1:length(N)){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i]>1 && age[i]<20, 1-exp(-10*lambda1)
+       ,ifelse(age[i]>20 && age[i]<40, 1-exp(-(20*lambda1+10*lambda2)),
+       ifelse(age[i]>40 && age[i]<60, 1-exp(-(20*lambda1+20*lambda2+10*lambda3)),
+       1-exp(-(20*lambda1+20*lambda2+20*lambda3+10*lambda4)))))
+    # time-varying catalytic model
+	}
+
+	#  prior dists
+  lambda1 ~ dunif(0,1)       #uninformative prior
+  lambda2 ~ dunif(0,1)       #uninformative prior
+  lambda3 ~ dunif(0,1)       #uninformative prior
+  lambda4 ~ dunif(0,1)       #uninformative prior
+
+}"
+
 #vector 
 paramVector <- c("lambda_1", "lambda_2", "delta")
 paramVector1 <- c("lambda_1", "lambda_2", "lambda_3", "delta1", "delta2")
+paramVector2 <- c("lambda1", "lambda2", "lambda3")
+paramVector3 <- c("lambda1", "lambda2", "lambda3", "lambda4")
 
 # Run model
 mcmc.length=50000
 jdat = list(n.pos  = df_chik$N.pos,
             N      = df_chik$N,
-            age    = df_chik$agemid,
-            survey = df_chik$survey)
+            age    = df_chik$agemid)
 jmod = jags.model(textConnection(jcode), data=jdat, n.chains=5, n.adapt = 15000)
 update(jmod, 1000)
-jpos = coda.samples(jmod, paramVector1, n.iter=mcmc.length)
+jpos = coda.samples(jmod, paramVector3, n.iter=mcmc.length)
 plot(jpos) # check convergence
 
 summary(jpos) 
@@ -133,6 +189,9 @@ paramDat = data.frame(paramVector,varOutput)
 
 ## 1. Sample from mcmc chain to get 95% credible intervals (model uncertainty)
 ager=1:80
+ager1=rep(10, times = 20)
+ager2=rep(20, times = 20)
+
 numSamples = 1000
 
 # 50% values  
@@ -208,6 +267,38 @@ for(ii in 1:length(paramVector)) {
     newRow <-  ifelse(ager>(2018-deltaSample1), 1-exp(-(lambdaSample_1*(ager-(2018-deltaSample1)) + lambdaSample_2*(deltaSample2-deltaSample1) + lambdaSample_3*(2018-deltaSample2)))
                       , ifelse(ager<2018-deltaSample2, 1-exp(-lambdaSample_3*ager), 1-exp(-(lambdaSample_2*(ager-(2018-deltaSample2)) + lambdaSample_3*(2018-deltaSample2)))))
     outDf[kk,] <- newRow
+  }
+}
+
+# sampling for yearly variation
+for(ii in 1:length(paramVector3)) {
+  
+  outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+  outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+  outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+  outDf_4 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+  
+  
+  for (kk in 1:numSamples) {
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+    
+    lambdaSample_1 <- mcmcMatrix[randomNumber,"lambda1"]
+    lambdaSample_2 <- mcmcMatrix[randomNumber,"lambda2"]
+    lambdaSample_3 <- mcmcMatrix[randomNumber,"lambda3"]
+    lambdaSample_4 <- mcmcMatrix[randomNumber,"lambda4"]
+
+    newRow1 <-  ifelse(ager1, 1-exp(-ager1*lambdaSample_1))
+    newRow2 <-  ifelse(ager1, 1-exp(-(ager2*lambdaSample_1+ager1*lambdaSample_2)))
+    newRow3 <-  ifelse(ager1, 1-exp(-(ager2*lambdaSample_1+ager2*lambdaSample_2+ager1*lambdaSample_3)))
+    newRow4 <-  ifelse(ager1, 1-exp(-(ager2*lambdaSample_1+ager2*lambdaSample_2+ager2*lambdaSample_3+ager1*lambdaSample_4)))
+    
+    outDf_1[kk,] <- newRow1
+    outDf_2[kk,] <- newRow2
+    outDf_3[kk,] <- newRow3
+    outDf_4[kk,] <- newRow4
+    
+    outDf <- cbind(outDf_1,outDf_2,outDf_3,outDf_4)
+    
   }
 }
 
