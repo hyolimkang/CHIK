@@ -23,7 +23,7 @@ df_chik <-  df_chik %>%
 
 df_chik[,c("midpoint","lower","upper")] = binom.confint(df_chik$N.pos, df_chik$N, method="exact")[,c("mean","lower","upper")]
 
-# discrete FOI model (estimate time point where FOI changes: 1 time change - assuming that FoI changes before/after outbreak)
+# Model1: discrete FOI model (estimate time point where FOI changes: 1 time change - assuming that FoI changes before/after outbreak)
 jcode <- "model{ 
 	for (i in 1:length(N)){
     n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
@@ -38,7 +38,7 @@ jcode <- "model{
   delta    ~ dunif(1939,2018) #uninformative prior
 }"
 
-# discrete FOI model (estimate time point where FOI changes: 2 time changes)
+# Model2: discrete FOI model (estimate time point where FOI changes: 2 time changes)
 jcode <- "model{ 
 	for (i in 1:length(N)){
     n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
@@ -57,7 +57,7 @@ jcode <- "model{
 
 }"
 
-# FoI varies in 4 age groups defined in the seroprevalence data 
+# Model3: FoI varies in 4 age groups defined in the seroprevalence data 
 jcode <- "model{ 
 	for (i in 1:length(N)){
     n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
@@ -124,7 +124,7 @@ numSamples = 1000
 
 # Sampling for Model1
 
-for(ii in 1:length(paramVector)) {
+for(ii in 1:length(paramVector1)) {
   
   outDf <- matrix(NA,nrow=numSamples, ncol = length(ager))
   
@@ -142,9 +142,9 @@ for(ii in 1:length(paramVector)) {
   }
 }
 
-# Sampling for 2 point changes
+# Sampling for Model2 
 
-for(ii in 1:length(paramVector)) {
+for(ii in 1:length(paramVector2)) {
   
   outDf <- matrix(NA,nrow=numSamples, ncol = length(ager))
   
@@ -164,7 +164,7 @@ for(ii in 1:length(paramVector)) {
   }
 }
 
-# sampling for yearly variation
+# sampling for Model3
 for(ii in 1:length(paramVector3)) {
   
   outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(range1))
