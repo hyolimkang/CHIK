@@ -154,8 +154,8 @@ for(ii in 1:length(paramVector2)) {
     lambdaSample_1 <- mcmcMatrix[randomNumber,"lambda_1"]
     lambdaSample_2 <- mcmcMatrix[randomNumber,"lambda_2"]
     lambdaSample_3 <- mcmcMatrix[randomNumber,"lambda_3"]
-    deltaSample1    <- mcmcMatrix[randomNumber,"delta1"]
-    deltaSample2    <- mcmcMatrix[randomNumber,"delta2"]
+    deltaSample1   <- mcmcMatrix[randomNumber,"delta1"]
+    deltaSample2   <- mcmcMatrix[randomNumber,"delta2"]
     
     
     newRow <-  ifelse(ager>(2018-deltaSample1), 1-exp(-(lambdaSample_1*(ager-(2018-deltaSample1)) + lambdaSample_2*(deltaSample2-deltaSample1) + lambdaSample_3*(2018-deltaSample2)))
