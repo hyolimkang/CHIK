@@ -223,8 +223,6 @@ ggplot()+
   ylim(0, 1)+
   xlab("Age (years)") + ylab("Proportion Seropositive")
 
-####FOI estimates
-
 ################################
 ##  Point Estimates for Model 3 
 ###############################
