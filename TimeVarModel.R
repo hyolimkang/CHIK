@@ -167,11 +167,9 @@ for(ii in 1:length(paramVector2)) {
 # sampling for Model3
 for(ii in 1:length(paramVector3)) {
   
-  outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(range1))
-  outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(range1))
-  outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(range1))
-  outDf_4 <- matrix(NA,nrow=numSamples, ncol = length(range1))
-  
+  for(i in 1:4) {
+    assign(paste0("outDf_", i), matrix(NA, nrow=numSamples, ncol = length(range1)))
+  }
   
   for (kk in 1:numSamples) {
     randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
@@ -181,23 +179,25 @@ for(ii in 1:length(paramVector3)) {
     lambdaSample_3 <- mcmcMatrix[randomNumber,"lambda3"]
     lambdaSample_4 <- mcmcMatrix[randomNumber,"lambda4"]
     
+    #seroprevalence for 4 different age groups 
     newRow1 <-  1-exp(-range1*lambdaSample_1)
     newRow2 <-  1-exp(-(range2*lambdaSample_1+range1*lambdaSample_2))
     newRow3 <-  1-exp(-(range2*lambdaSample_1+range2*lambdaSample_2+range1*lambdaSample_3))
     newRow4 <-  1-exp(-(range2*lambdaSample_1+range2*lambdaSample_2+range2*lambdaSample_3+range1*lambdaSample_4))
     
+    #store results of each age group's seroprevalence in 4 matrices
     outDf_1[kk,] <- newRow1
     outDf_2[kk,] <- newRow2
     outDf_3[kk,] <- newRow3
     outDf_4[kk,] <- newRow4
     
+    #combine seroprevalence of 4 age groups 
     outDf <- cbind(outDf_1,outDf_2,outDf_3,outDf_4)
     
   }
 }
 
 # get quantile matrices 
-
 quantileMatrix_1 <- matrix(NA,nrow=ncol(outDf), ncol = 3)
 for(jj in 1:ncol(outDf)){
   quantiles <- outDf[,jj] %>% quantile(probs=c(.5,.025,.975))
@@ -211,7 +211,6 @@ for(jj in 1:ncol(outDf)){
 ############################################################
 ## Plots
 ############################################################
-
 
 ggplot()+
   geom_line(data = df_upperLower_1, aes(x=agemid, y=mean), color = "#558C8C")+
