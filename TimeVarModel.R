@@ -223,6 +223,65 @@ ggplot()+
   ylim(0, 1)+
   xlab("Age (years)") + ylab("Proportion Seropositive")
 
+####FOI estimates
+
+################################
+##  Point Estimates for Model 3 
+###############################
+lambda1PointEst <- mcmcMatrix[,"lambda1"] %>% quantile(probs=c(.5,.025,.975))
+lambda2PointEst <- mcmcMatrix[,"lambda2"] %>% quantile(probs=c(.5,.025,.975))
+lambda3PointEst <- mcmcMatrix[,"lambda3"] %>% quantile(probs=c(.5,.025,.975))
+lambda4PointEst <- mcmcMatrix[,"lambda4"] %>% quantile(probs=c(.5,.025,.975))
+
+paramEstimates <- list(lambda1PointEst, lambda2PointEst, lambda3PointEst,lambda4PointEst)
+
+# 50% values  
+foiEstimates_1 = paramEstimates[[1]]
+foiEstimates_1 <- data.frame(foiEstimates_1)
+lambda_1 <- foiEstimates_1[1,]
+foiEstimates_2 = paramEstimates[[2]]
+foiEstimates_2 <- data.frame(foiEstimates_2)
+lambda_2 <- foiEstimates_2[1,]
+foiEstimates_3 = paramEstimates[[3]]
+foiEstimates_3 <- data.frame(foiEstimates_3)
+lambda_3 <- foiEstimates_3[1,]
+foiEstimates_4 = paramEstimates[[4]]
+foiEstimates_4 <- data.frame(foiEstimates_4)
+lambda_4 <- foiEstimates_4[1,]
+
+Foi1<-data.frame(transpose(foiEstimates_1))
+Foi1$year <- c("1939-1958")
+Foi2<-data.frame(transpose(foiEstimates_2))
+Foi2$year <- c("1959-1978")
+Foi3<-data.frame(transpose(foiEstimates_3))
+Foi3$year <- c("1979-1998")
+Foi4<-data.frame(transpose(foiEstimates_4))
+Foi4$year <- c("1999-2018")
+
+# FOI estiamtes bars
+ggplot()+
+  geom_errorbar(data = Foi1, aes(x   = year,
+                                 ymin= foiEstimates_1.1,
+                                 ymax= foiEstimates_1.2),
+                color = "#558C8C", width = 0.1)+
+  geom_point(data = Foi1, aes(x=year, y=foiEstimates_1),color = "#558C8C")+
+  geom_errorbar(data = Foi2, aes(x   = year,
+                                 ymin= foiEstimates_2.1,
+                                 ymax= foiEstimates_2.2),
+                color = "#C05746", width = 0.1)+
+  geom_point(data = Foi2, aes(x=year, y=foiEstimates_2),color = "#C05746")+
+  geom_errorbar(data = Foi3, aes(x   = year,
+                                 ymin= foiEstimates_3.1,
+                                 ymax= foiEstimates_3.2),
+                color = "#075E9D", width = 0.1) +
+  geom_point(data = Foi3, aes(x=year, y=foiEstimates_3),color = "#075E9D")+
+  geom_errorbar(data = Foi4, aes(x   = year,
+                                 ymin= foiEstimates_4.1,
+                                 ymax= foiEstimates_4.2),
+                color = "#CD0BBC", width = 0.1) +
+  geom_point(data = Foi4, aes(x=year, y=foiEstimates_4),color = "#CD0BBC")+
+  xlab("Time Periods") + ylab("Force of Infection (FoI)") +
+  theme_bw()
 
 
 
