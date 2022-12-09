@@ -179,11 +179,11 @@ for(ii in 1:length(paramVector3)) {
     lambdaSample_3 <- mcmcMatrix[randomNumber,"lambda3"]
     lambdaSample_4 <- mcmcMatrix[randomNumber,"lambda4"]
     
-    #seroprevalence for 4 different age groups 
-    newRow1 <-  1-exp(-range1*lambdaSample_1)
-    newRow2 <-  1-exp(-(range2*lambdaSample_1+range1*lambdaSample_2))
-    newRow3 <-  1-exp(-(range2*lambdaSample_1+range2*lambdaSample_2+range1*lambdaSample_3))
-    newRow4 <-  1-exp(-(range2*lambdaSample_1+range2*lambdaSample_2+range2*lambdaSample_3+range1*lambdaSample_4))
+    #seroprevalence for 80 different age groups 
+    newRow1 <-  1-exp(-lambdaSample_1)
+    newRow2 <-  1-exp(-(20*lambdaSample_1+10*lambdaSample_2))
+    newRow3 <-  1-exp(-(20*lambdaSample_1+20*lambdaSample_2+10*lambdaSample_3))
+    newRow4 <-  1-exp(-(20*lambdaSample_1+20*lambdaSample_2+20*lambdaSample_3+10*lambdaSample_4))
     
     #store results of each age group's seroprevalence in 4 matrices
     outDf_1[kk,] <- newRow1

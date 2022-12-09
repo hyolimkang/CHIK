@@ -12,12 +12,9 @@ options(scipen=999)
 
 ##Read file
 library(readxl)
-chik_systematic_review_v1 <- read_excel("Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/1.Aim1/all_countries/chik_systematic_review_v1.xlsx", 
+chik_systematic_review_v1 <- read_excel("~/Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/1.Aim1/all_countries/chik_systematic_review_v1.xlsx", 
                                         sheet = "prac")
 View(chik_systematic_review_v1)
-
-chik_systematic_review_v1 <- read_excel("C:/Users/Hyolim/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/chik_systematic_review_v1.xlsx", 
-                                        sheet = "prac")
 #Rename data
 df_chik = chik_systematic_review_v1 
 
@@ -25,7 +22,6 @@ df_chik <-  df_chik %>%
   dplyr::mutate(agemid = (age_min+age_max)/2) %>% filter(study == 4)
 
 df_chik[,c("midpoint","lower","upper")] = binom.confint(df_chik$N.pos, df_chik$N, method="exact")[,c("mean","lower","upper")]
-
 
 # Define model
 
@@ -79,7 +75,6 @@ jcode <- "model{
   delta2  ~ dunif(1939,2018)  #uninformative prior
 
 }"
-
 
 # yearly variation in FoI
 jcode <- "model{ 
@@ -189,9 +184,8 @@ paramDat = data.frame(paramVector,varOutput)
 
 ## 1. Sample from mcmc chain to get 95% credible intervals (model uncertainty)
 ager=1:80
-ager1=rep(10, times = 20)
-ager2=rep(20, times = 20)
-
+range1=rep(10, times = 20)
+range2=rep(20, times = 20)
 numSamples = 1000
 
 # 50% values  
@@ -213,7 +207,6 @@ delta2 <- floor(delta2Estimates[1,])
 
 ## for loop multiple age ranges
 
-ages <- list(ager1, ager2, ager3)
 
 for(i in 1: length(ages)) {
   assign(paste0("outDf_", i), matrix(NA, nrow=numSamples, ncol = length(ages[[i]])))
@@ -273,10 +266,10 @@ for(ii in 1:length(paramVector)) {
 # sampling for yearly variation
 for(ii in 1:length(paramVector3)) {
   
-  outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
-  outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
-  outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
-  outDf_4 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+  outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(range1))
+  outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(range1))
+  outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(range1))
+  outDf_4 <- matrix(NA,nrow=numSamples, ncol = length(range1))
   
   
   for (kk in 1:numSamples) {
@@ -287,10 +280,15 @@ for(ii in 1:length(paramVector3)) {
     lambdaSample_3 <- mcmcMatrix[randomNumber,"lambda3"]
     lambdaSample_4 <- mcmcMatrix[randomNumber,"lambda4"]
 
-    newRow1 <-  ifelse(ager1, 1-exp(-ager1*lambdaSample_1))
-    newRow2 <-  ifelse(ager1, 1-exp(-(ager2*lambdaSample_1+ager1*lambdaSample_2)))
-    newRow3 <-  ifelse(ager1, 1-exp(-(ager2*lambdaSample_1+ager2*lambdaSample_2+ager1*lambdaSample_3)))
-    newRow4 <-  ifelse(ager1, 1-exp(-(ager2*lambdaSample_1+ager2*lambdaSample_2+ager2*lambdaSample_3+ager1*lambdaSample_4)))
+    #newRow1 <-  ifelse(ager1, 1-exp(-ager1*lambdaSample_1))
+    #newRow2 <-  ifelse(ager1, 1-exp(-(ager2*lambdaSample_1+ager1*lambdaSample_2)))
+    #newRow3 <-  ifelse(ager1, 1-exp(-(ager2*lambdaSample_1+ager2*lambdaSample_2+ager1*lambdaSample_3)))
+    #newRow4 <-  ifelse(ager1, 1-exp(-(ager2*lambdaSample_1+ager2*lambdaSample_2+ager2*lambdaSample_3+ager1*lambdaSample_4)))
+    
+    newRow1 <-  1-exp(-range1*lambdaSample_1)
+    newRow2 <-  1-exp(-(range2*lambdaSample_1+range1*lambdaSample_2))
+    newRow3 <-  1-exp(-(range2*lambdaSample_1+range2*lambdaSample_2+range1*lambdaSample_3))
+    newRow4 <-  1-exp(-(range2*lambdaSample_1+range2*lambdaSample_2+range2*lambdaSample_3+range1*lambdaSample_4))
     
     outDf_1[kk,] <- newRow1
     outDf_2[kk,] <- newRow2
