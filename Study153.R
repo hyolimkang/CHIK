@@ -16,7 +16,7 @@ chik_systematic_review_v1 <- read_excel("~/Library/CloudStorage/OneDrive-LondonS
 df_chik = chik_systematic_review_v1 
 
 df_chik <-  df_chik %>% 
-  dplyr::mutate(agemid = (age_min+age_max)/2) %>% filter(study == 5)
+  dplyr::mutate(agemid = (age_min+age_max)/2) %>% filter(study == 5) %>% filter(age_min <70)
 
 df_chik[,c("midpoint","lower","upper")] = binom.confint(df_chik$N.pos, df_chik$N, method="exact")[,c("mean","lower","upper")]
 
@@ -29,6 +29,24 @@ jcode <- "model{
   lambda ~ dunif(0,1) #uninformative prior
 }"
 paramVector <- c("lambda")
+
+# age cut-off model (model in ellie's paper)
+jcode <- "model{ 
+	for (i in 1:length(N)){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] <- ifelse(age[i] < cutoff, 
+    1-exp(-lambda_1*age[i]),
+    1-((exp(-lambda_1*cutoff))*(exp((-lambda_2*(age[i]-cutoff))))))
+
+	}
+	#  prior dists
+  lambda_1 ~ dunif(0,1) #uninformative prior
+  lambda_2 ~ dunif(0,1) #uninformative prior
+  cutoff   ~ dunif(0,30) #uninformative prior
+
+}"
+paramVector1 <- c("lambda_1", "lambda_2", "cutoff")
+
 # Run model
 mcmc.length=50000
 jdat = list(n.pos= df_chik$N.pos,
@@ -36,14 +54,14 @@ jdat = list(n.pos= df_chik$N.pos,
             age=df_chik$agemid)
 jmod = jags.model(textConnection(jcode), data=jdat, n.chains=1, n.adapt = 15000)
 update(jmod, 500)
-jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+jpos = coda.samples(jmod, paramVector1, n.iter=mcmc.length)
 
 summary(jpos) 
 mcmcMatrix <- as.matrix(jpos)
 
 #output
 numSamples=1000
-ager=1:100
+ager=1:70
 
 # Sampling for Model1
 for(ii in 1:length(paramVector)) {
@@ -59,6 +77,27 @@ for(ii in 1:length(paramVector)) {
     outDf[kk,] <- newRow
   }
 }
+
+# Sampling for Model2
+for(ii in 1:length(paramVector1)) {
+  
+  outDf <- matrix(NA,nrow=numSamples, ncol = length(ager))
+  
+  for (kk in 1:numSamples) {
+    
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+    lambdaSample1 <- mcmcMatrix[randomNumber,"lambda_1"]
+    lambdaSample2 <- mcmcMatrix[randomNumber,"lambda_2"]
+    cutoffSample  <- mcmcMatrix[randomNumber,"cutoff"]
+    
+    newRow <-  ifelse(ager < cutoffSample, 
+                      1-exp(-lambdaSample1*ager),
+                      1-((exp(-lambdaSample1*cutoffSample))*(exp((-lambdaSample2*(ager-cutoffSample))))))
+    outDf[kk,] <- newRow
+  }
+}
+
+
 
 # get quantile matrices 
 quantileMatrix_1 <- matrix(NA,nrow=ncol(outDf), ncol = 3)
