@@ -16,7 +16,7 @@ chik_systematic_review_v1 <- read_excel("~/Library/CloudStorage/OneDrive-LondonS
 df_chik = chik_systematic_review_v1 
 
 df_chik <-  df_chik %>% 
-  dplyr::mutate(agemid = (age_min+age_max)/2) %>% filter(study == 5) %>% filter(age_min <70)
+  dplyr::mutate(agemid = (age_min+age_max)/2) %>% filter(study == 5) %>% filter(age_min <75)
 
 df_chik[,c("midpoint","lower","upper")] = binom.confint(df_chik$N.pos, df_chik$N, method="exact")[,c("mean","lower","upper")]
 
@@ -37,16 +37,35 @@ jcode <- "model{
     seropos_est[i] <- ifelse(age[i] < cutoff, 
     1-exp(-lambda_1*age[i]),
     1-((exp(-lambda_1*cutoff))*(exp((-lambda_2*(age[i]-cutoff))))))
-
+loglik[i] <- logdensity.bin(n.pos[i],seropos_est[i],N[i])
 	}
 	#  prior dists
   lambda_1 ~ dunif(0,1) #uninformative prior
   lambda_2 ~ dunif(0,1) #uninformative prior
-  cutoff   ~ dunif(0,30) #uninformative prior
+  cutoff   ~ dunif(0,70) #uninformative prior
 
 }"
 paramVector1 <- c("lambda_1", "lambda_2", "cutoff")
 
+# age cut off and reverse catalytic
+jcode <- "model{
+for (i in 1:length(N)){ 
+n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+seropos_est[i] <- ifelse(age[i] < cutoff,
+(lambda / (lambda + delta)) * (1 - exp(-(lambda + delta)*age[i])),
+((lambda / (lambda+ delta))* (1-exp(-(lambda +delta)*cutoff)) 
+- ((lambda*alpha) / ((lambda*alpha)+delta))) * exp(-((lambda*alpha) + delta)*(age[i]-cutoff)) 
++ ((lambda*alpha) / ((lambda*alpha)+delta)))
+loglik[i] <- logdensity.bin(n.pos[i],seropos_est[i],N[i])
+}
+	#  prior dists
+  lambda ~ dunif(0,1)  #uninformative prior
+  delta  ~ dunif(0,1)  #uninformative prior
+  cutoff ~ dunif(0,70) #uninformative prior
+  alpha  ~ dgamma(5,5)  #uninformative prior
+
+}"
+paramVector2 <- c("lambda", "delta", "cutoff", "alpha")
 # Run model
 mcmc.length=50000
 jdat = list(n.pos= df_chik$N.pos,
@@ -54,14 +73,14 @@ jdat = list(n.pos= df_chik$N.pos,
             age=df_chik$agemid)
 jmod = jags.model(textConnection(jcode), data=jdat, n.chains=1, n.adapt = 15000)
 update(jmod, 500)
-jpos = coda.samples(jmod, paramVector1, n.iter=mcmc.length)
+jpos = coda.samples(jmod, paramVector2, n.iter=mcmc.length)
 
 summary(jpos) 
 mcmcMatrix <- as.matrix(jpos)
 
 #output
 numSamples=1000
-ager=1:70
+ager=1:80
 
 # Sampling for Model1
 for(ii in 1:length(paramVector)) {
@@ -97,6 +116,27 @@ for(ii in 1:length(paramVector1)) {
   }
 }
 
+# Sampling for Model3
+for(ii in 1:length(paramVector2)) {
+  
+  outDf <- matrix(NA,nrow=numSamples, ncol = length(ager))
+  
+  for (kk in 1:numSamples) {
+    
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+    lambdaSample <- mcmcMatrix[randomNumber,"lambda"]
+    deltaSample  <- mcmcMatrix[randomNumber,"delta"]
+    cutoffSample <- mcmcMatrix[randomNumber,"cutoff"]
+    alphaSample  <- mcmcMatrix[randomNumber,"alpha"]
+    
+    newRow <- ifelse(ager < cutoffSample,
+                     (lambdaSample / (lambdaSample + deltaSample)) * (1 - exp(-(lambdaSample + deltaSample)*ager)),
+                     ((lambdaSample / (lambdaSample+ deltaSample))* (1-exp(-(lambdaSample +deltaSample)*cutoffSample)) 
+                      - ((lambdaSample*alphaSample) / ((lambdaSample*alphaSample)+deltaSample))) * exp(-((lambdaSample*alphaSample) + deltaSample)*(ager-cutoffSample)) 
+                     + ((lambdaSample*alphaSample) / ((lambdaSample*alphaSample)+deltaSample))) 
+    outDf[kk,] <- newRow
+  }
+}
 
 
 # get quantile matrices 
