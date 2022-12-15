@@ -179,8 +179,8 @@ for(ii in 1:length(paramVector3)) {
     lambdaSample_3 <- mcmcMatrix[randomNumber,"lambda3"]
     lambdaSample_4 <- mcmcMatrix[randomNumber,"lambda4"]
     
-    #seroprevalence for 80 different age groups 
-    newRow1 <-  1-exp(-lambdaSample_1)
+    #seroprevalence for 4 different age groups 
+    newRow1 <-  1-exp(-10*lambdaSample_1)
     newRow2 <-  1-exp(-(20*lambdaSample_1+10*lambdaSample_2))
     newRow3 <-  1-exp(-(20*lambdaSample_1+20*lambdaSample_2+10*lambdaSample_3))
     newRow4 <-  1-exp(-(20*lambdaSample_1+20*lambdaSample_2+20*lambdaSample_3+10*lambdaSample_4))

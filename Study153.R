@@ -66,6 +66,23 @@ loglik[i] <- logdensity.bin(n.pos[i],seropos_est[i],N[i])
 
 }"
 paramVector2 <- c("lambda", "delta", "cutoff", "alpha")
+
+# model4
+jcode <- "model{ 
+	for (i in 1:length(N)){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i] > (2022-delta), 1-exp(-(lambda_1*(age[i]-(2022-delta)) + lambda_2*(2022-delta))),
+                            1-exp(-lambda_2*age[i]))
+    # time-varying catalytic model
+	}
+
+	#  prior dists
+  lambda_1 ~ dunif(0,1)       #uninformative prior
+  lambda_2 ~ dunif(0,1)       #uninformative prior
+  delta    ~ dunif(2014,2015) #uninformative prior
+}"
+paramVector3 <- c("lambda_1", "lambda_2", "delta")
+
 # Run model
 mcmc.length=50000
 jdat = list(n.pos= df_chik$N.pos,
@@ -73,7 +90,7 @@ jdat = list(n.pos= df_chik$N.pos,
             age=df_chik$agemid)
 jmod = jags.model(textConnection(jcode), data=jdat, n.chains=1, n.adapt = 15000)
 update(jmod, 500)
-jpos = coda.samples(jmod, paramVector2, n.iter=mcmc.length)
+jpos = coda.samples(jmod, paramVector3, n.iter=mcmc.length)
 
 summary(jpos) 
 mcmcMatrix <- as.matrix(jpos)
@@ -138,6 +155,23 @@ for(ii in 1:length(paramVector2)) {
   }
 }
 
+# Sampling for Model4
+for(ii in 1:length(paramVector3)) {
+  
+  outDf <- matrix(NA,nrow=numSamples, ncol = length(ager))
+  
+  for (kk in 1:numSamples) {
+    
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+    lambdaSample1 <- mcmcMatrix[randomNumber,"lambda_1"]
+    lambdaSample2 <- mcmcMatrix[randomNumber,"lambda_2"]
+    deltaSample  <- mcmcMatrix[randomNumber,"delta"]
+    
+    newRow <- ifelse(ager > (2022-deltaSample), 1-exp(-(lambdaSample1*(ager-(2022-deltaSample)) + lambdaSample2*(2022-deltaSample))),
+                     1-exp(-lambdaSample2*ager))
+    outDf[kk,] <- newRow
+  }
+}
 
 # get quantile matrices 
 quantileMatrix_1 <- matrix(NA,nrow=ncol(outDf), ncol = 3)
@@ -165,5 +199,36 @@ ggplot()+
   xlab("Age (years)") + ylab("Proportion Seropositive")
 
 
+## FoI graph
+lambda1PointEst <- mcmcMatrix[,"lambda_1"] %>% quantile(probs=c(.5,.025,.975))
+lambda2PointEst <- mcmcMatrix[,"lambda_2"] %>% quantile(probs=c(.5,.025,.975))
+deltaPointEst   <- mcmcMatrix[,"delta"] %>% quantile(probs=c(.5,.025,.975))
+
+paramEstimates <- list(lambda1PointEst, lambda2PointEst, deltaPointEst)
+
+foiEstimates_1 = paramEstimates[[1]]
+foiEstimates_1 <- data.frame(foiEstimates_1)
+lambda_1 <- foiEstimates_1[1,]
+foiEstimates_2 = paramEstimates[[2]]
+foiEstimates_2 <- data.frame(foiEstimates_2)
+lambda_2 <- foiEstimates_2[1,]
+deltaEstimates = paramEstimates[[3]]
+deltaEstimates <- data.frame(deltaEstimates)
+delta <- floor(deltaEstimates[1,])
+
+
+
+data  = matrix(1930:2022,nrow=93, ncol = 1)
+data1 = matrix(lambda_1, nrow=84, ncol = 1)
+data2 = matrix(lambda_2, nrow=9, ncol = 1)
+data3 = rbind(data1, data2)
+FoIdata = cbind(data, data3)
+FoIdata = data.frame(FoIdata)
+colnames(FoIdata)[which(names(FoIdata) == "X1")] <- "Year"
+colnames(FoIdata)[which(names(FoIdata) == "X2")] <- "FoI"
+
+ggplot(data = FoIdata, aes(x= Year, y = FoI))+
+  geom_line(color = "#558C8C")+
+  theme_bw()
 
 
