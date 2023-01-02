@@ -30,7 +30,7 @@ jcode <- "model{
 }"
 paramVector <- c("lambda")
 
-# age cut-off model (model in ellie's paper)
+# age cut-off model 
 jcode <- "model{ 
 	for (i in 1:length(N)){
     n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
@@ -184,6 +184,8 @@ for(jj in 1:ncol(outDf)){
   
 }
 
+# Binomial sample uncertainty - accounts for the sample size of the underlying data
+
 ############################################################
 ## Plots
 ############################################################
@@ -231,4 +233,30 @@ ggplot(data = FoIdata, aes(x= Year, y = FoI))+
   geom_line(color = "#558C8C")+
   theme_bw()
 
+#adding sampling uncertainty to the graph
+source("~/Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/1.Aim1/codes/CHIK/SamplingUncertaintyFunc.R")
 
+ageVector <- df_chik$agemid
+ageTotals <- df_chik$N
+
+SampUncertainMCMCdiscrete <- mcmcRandomSamplerCatTimeDiscrete(1000, mcmcMatrix, ageVector, ageTotals)
+ageQuantSampDiscrete      <- ageQuantiles(SampUncertainMCMCdiscrete)
+
+df_sampling = data.frame(
+  midpoint = df_chik$agemid,
+  mean = ifelse(df_chik$agemid > (2022-delta), 1-exp(-(lambda_1*(df_chik$agemid-(2022-delta)) + lambda_2*(2022-delta))),
+                1-exp(-lambda_2*ageVector)),
+  upper = ageQuantSampDiscrete[,3],
+  lower = ageQuantSampDiscrete[,2]
+)
+
+ggplot()+
+  geom_line(data = df_upperLower_1, aes(x=agemid, y=mean), color = "#558C8C")+
+  geom_ribbon(data = df_upperLower_1, alpha=0.2, aes(x=agemid, y=mean, ymin=lower, ymax=upper), fill = "#558C8C")+
+  geom_point(data = df_chik, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+  geom_linerange(data = df_chik, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+ ### data 2 
+  geom_ribbon(data = df_sampling, alpha=0.2, aes(x=midpoint, y=mean, ymin=lower, ymax=upper), fill = "#558C8C")+
+  theme_bw()+
+  scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+  ylim(0, 1)+
+  xlab("Age (years)") + ylab("Proportion Seropositive")
