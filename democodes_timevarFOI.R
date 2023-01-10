@@ -186,6 +186,10 @@ paramDat = data.frame(paramVector,varOutput)
 ager=1:80
 range1=rep(10, times = 20)
 range2=rep(20, times = 20)
+ager1=1:20
+ager2=21:40
+ager3=41:60
+ager4=61:80
 numSamples = 1000
 
 # 50% values  
@@ -266,10 +270,10 @@ for(ii in 1:length(paramVector)) {
 # sampling for yearly variation
 for(ii in 1:length(paramVector3)) {
   
-  outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(range1))
-  outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(range1))
-  outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(range1))
-  outDf_4 <- matrix(NA,nrow=numSamples, ncol = length(range1))
+  outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+  outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+  outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(ager3))
+  outDf_4 <- matrix(NA,nrow=numSamples, ncol = length(ager4))
   
   
   for (kk in 1:numSamples) {
@@ -285,10 +289,10 @@ for(ii in 1:length(paramVector3)) {
     #newRow3 <-  ifelse(ager1, 1-exp(-(ager2*lambdaSample_1+ager2*lambdaSample_2+ager1*lambdaSample_3)))
     #newRow4 <-  ifelse(ager1, 1-exp(-(ager2*lambdaSample_1+ager2*lambdaSample_2+ager2*lambdaSample_3+ager1*lambdaSample_4)))
     
-    newRow1 <-  1-exp(-range1*lambdaSample_1)
-    newRow2 <-  1-exp(-(range2*lambdaSample_1+range1*lambdaSample_2))
-    newRow3 <-  1-exp(-(range2*lambdaSample_1+range2*lambdaSample_2+range1*lambdaSample_3))
-    newRow4 <-  1-exp(-(range2*lambdaSample_1+range2*lambdaSample_2+range2*lambdaSample_3+range1*lambdaSample_4))
+    newRow1 <-  1-exp(-ager1*lambdaSample_1)
+    newRow2 <-  1-exp(-(ager2*lambdaSample_1+ager2*lambdaSample_2))
+    newRow3 <-  1-exp(-(ager3*lambdaSample_1+ager3*lambdaSample_2+ager3*lambdaSample_3))
+    newRow4 <-  1-exp(-(ager4*lambdaSample_1+ager4*lambdaSample_2+ager4*lambdaSample_3+ager4*lambdaSample_4))
     
     outDf_1[kk,] <- newRow1
     outDf_2[kk,] <- newRow2
@@ -301,6 +305,7 @@ for(ii in 1:length(paramVector3)) {
 }
 
 # get quantile matrices 
+ager= 1:80
 
 quantileMatrix_1 <- matrix(NA,nrow=ncol(outDf), ncol = 3)
 for(jj in 1:ncol(outDf)){

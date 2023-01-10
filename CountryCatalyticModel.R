@@ -292,6 +292,7 @@ df_africa <-  df_africa %>%
 df_africa <- df_africa[-c(14),]
 #sub-setting datafiles by study
 datA1 <- df_africa[df_africa$study == "1",]
+datA1 <- datA1[-c(4),]
 datA2 <- df_africa[df_africa$study == "2",]
 datA3 <- df_africa[df_africa$study == "3",]
 datA4 <- df_africa[df_africa$study == "4",]
@@ -657,5 +658,153 @@ viodata %>%
     panel.spacing = unit(0.1, "lines"),
     strip.text.x = element_text(size = 8)
   )
+
+######age dependent model
+# Define model
+jcode <- "model{ 
+	for (i in 1:3){
+	
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] <- ifelse(age[i]>13 && age[i]<21, 1-exp(-lambda_1*age[i]), 
+    ifelse(age[i]>20 && age[i]<31, 
+    1-(exp(-20*lambda_1 +(age[i]-20)*lambda_2)), 
+    1- (exp(-20*lambda_1 + 10*lambda_2 + (age[i]-30)*lambda_3))))	}
+	#  prior dists
+  lambda_1 ~ dunif(0,1) #uninformative prior
+  lambda_2 ~ dunif(0,1) #uninformative prior
+  lambda_3 ~ dunif(0,1) #uninformative prior
+}"
+
+
+#vector 
+paramVectorAfrica <- c("lambda_1", "lambda_2","lambda_3")
+
+# Run model
+mcmc.length=50000
+jdat = list(n.pos= df_africa$N.pos,
+            N=df_africa$N,
+            age=df_africa$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVectorAfrica, n.iter=mcmc.length)
+plot(jpos) # check convergence
+
+summary(jpos) 
+mcmcMatrix <- as.matrix(jpos)
+
+# generate ramdomNmber for credible interval
+ager1= 1:20
+ager2= 21:30
+ager3= 31:50
+
+paramVector <- c("lambda_1", "lambda_2", "lambda_3")
+
+for(ii in 1:length(paramVector)) {
+  
+  outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+  outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+  outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(ager3))
+  
+  for (kk in 1:numSamples ) {
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+    
+    lambdaSample_1 <- mcmcMatrix[randomNumber,"lambda_1"]
+    lambdaSample_2 <- mcmcMatrix[randomNumber,"lambda_2"]
+    lambdaSample_3 <- mcmcMatrix[randomNumber,"lambda_3"]
+    
+    newRow_1 <-  1-exp(-lambdaSample_1*ager1)
+              
+    newRow_2 <-  1-(exp(-20*lambdaSample_1 - (ager2-20)*lambdaSample_2)) 
+                            
+    newRow_3 <-  1- (exp(-20*lambdaSample_1 - 10*lambdaSample_2 - (ager3-30)*lambdaSample_3))
+    
+   outDf_1[kk,] <- newRow_1
+   outDf_2[kk,] <- newRow_2
+   outDf_3[kk,] <- newRow_3
+   
+   outDf <- cbind(outDf_1,outDf_2,outDf_3)
+   
+  }
+}
+
+# get quantile matrices 
+
+quantileMatrix_1 <- matrix(NA,nrow=ncol(outDf), ncol = 3)
+for(jj in 1:ncol(outDf)){
+  quantiles <- outDf[,jj] %>% quantile(probs=c(.5,.025,.975))
+  quantileMatrix_1[jj,] <- quantiles
+  df_upperLower_1 <- cbind(ager, quantileMatrix_1)
+  df_upperLower_1 <- as.data.frame(df_upperLower_1)
+  colnames(df_upperLower_1) <- c('agemid', 'mean', 'upper', 'lower')
+  
+}
+
+
+ggplot()+
+  geom_line(data = df_upperLower_1, aes(x=agemid, y=mean), color = "#558C8C")+
+  geom_ribbon(data = df_upperLower_1, alpha=0.2, aes(x=agemid, y=mean, ymin=lower, ymax=upper), fill = "#558C8C")+
+  geom_point(data = datA1, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+  geom_linerange(data = datA1, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+
+  theme_bw()+
+  scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+  ylim(0, 1)+
+  xlab("Age (years)") + ylab("Proportion Seropositive")
+
+
+ggplot()+
+  geom_point(data = datA2, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+  geom_linerange(data = datA2, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+
+  theme_ipsum()+
+  scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+  ylim(0, 1)+
+  xlab("Age (years)") + ylab("Proportion Seropositive")
+
+ggplot()+
+  geom_point(data = datA3, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+  geom_linerange(data = datA3, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+
+  theme_ipsum()+
+  scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+  ylim(0, 1)+
+  xlab("Age (years)") + ylab("Proportion Seropositive")
+
+ggplot()+
+  geom_point(data = datA4, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+  geom_linerange(data = datA4, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+
+  theme_ipsum()+
+  scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+  ylim(0, 1)+
+  xlab("Age (years)") + ylab("Proportion Seropositive")
+
+ggplot()+
+  geom_point(data = datA5, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+  geom_linerange(data = datA5, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+
+  theme_ipsum()+
+  scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+  ylim(0, 1)+
+  xlab("Age (years)") + ylab("Proportion Seropositive")
+
+ggplot()+
+  geom_point(data = datA6, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+  geom_linerange(data = datA6, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+
+  theme_ipsum()+
+  scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+  ylim(0, 1)+
+  xlab("Age (years)") + ylab("Proportion Seropositive")
+
+ggplot()+
+  geom_point(data = datA6, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+  geom_linerange(data = datA6, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+
+  theme_ipsum()+
+  scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+  ylim(0, 1)+
+  xlab("Age (years)") + ylab("Proportion Seropositive")
+
+ggplot()+
+  geom_point(data = datA8, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+  geom_linerange(data = datA8, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+
+  theme_ipsum()+
+  scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+  ylim(0, 1)+
+  xlab("Age (years)") + ylab("Proportion Seropositive")
 
 
