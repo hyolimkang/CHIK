@@ -8,30 +8,38 @@ library (ggrepel)
 library(scales)
 library(viridis)
 library(hrbrthemes)
+require(binom)
 
 #https://r-graph-gallery.com/48-grouped-barplot-with-ggplot2
 #https://www.rdocumentation.org/packages/hrbrthemes/versions/0.8.0/topics/theme_ipsum
 
 CountryModel <- read_excel("C:/Users/Hyolim/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/CountryModel.xlsx", 
                            sheet = "bargraph")
+CountryModel <- read_excel("~/Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/1.Aim1/all_countries/CountryModel.xlsx", 
+                           sheet = "bargraph")
 View(CountryModel)
 
-thai      <- CountryModel %>% filter(Country == "Thailand")
-indonesia1 <- CountryModel %>% filter(Country == "Indonesia" & `Study Yeaer` == "2013-2016")
-indonesia2 <- CountryModel %>% filter(Country == "Indonesia" & `Study Yeaer` == "2009-2010")
-malaysia     <- CountryModel %>% filter(Country == "Malaysia")
-myanmar     <- CountryModel %>% filter(Country == "Myanmar")
-brazilAlto  <- CountryModel %>% filter(Country == "Brazil, Alto")
-brazilFeira  <- CountryModel %>% filter(Country == "Brazil, Feira")
-brazilRio    <- CountryModel %>% filter(Country =="Brazil, Rio")
-brazilQuixada <- CountryModel %>% filter(Country == "Brazil, Quixadá, Ceará")
-brazilJuaz   <- CountryModel %>% filter(Country == "Brazil, Juazeiro do Norte")
-Ecuador   <- CountryModel %>% filter(Country =="Ecuador")
-Martinique   <- CountryModel %>% filter(Country =="Martinique")
-Haiti        <- CountryModel %>% filter(Country == "Haiti")
-suriname       <- CountryModel %>% filter(Country == "Suriname")
-nicaragua       <- CountryModel %>% filter(Country == "Nicaragua")
-puertorico    <- CountryModel %>% filter(Country == "Puerto Rico")
+CountryModel <- CountryModel[Countr$country == "Thailand",]
+
+CountryModel[,c("midpoint","lower","upper")] = binom.confint(CountryModel$N, CountryModel$N.tot, method="exact")[,c("mean","lower","upper")]
+
+
+thai      <- CountryModel %>% filter(country == "Thailand")
+indonesia1 <- CountryModel %>% filter(country == "Indonesia" & `Study Yeaer` == "2013-2016")
+indonesia2 <- CountryModel %>% filter(country == "Indonesia" & `Study Yeaer` == "2009-2010")
+malaysia     <- CountryModel %>% filter(country == "Malaysia")
+myanmar     <- CountryModel %>% filter(country == "Myanmar")
+brazilAlto  <- CountryModel %>% filter(country == "Brazil, Alto")
+brazilFeira  <- CountryModel %>% filter(country == "Brazil, Feira")
+brazilRio    <- CountryModel %>% filter(country =="Brazil, Rio")
+brazilQuixada <- CountryModel %>% filter(country == "Brazil, Quixadá, Ceará")
+brazilJuaz   <- CountryModel %>% filter(country == "Brazil, Juazeiro do Norte")
+Ecuador   <- CountryModel %>% filter(country =="Ecuador")
+Martinique   <- CountryModel %>% filter(country =="Martinique")
+Haiti        <- CountryModel %>% filter(country == "Haiti")
+suriname       <- CountryModel %>% filter(country == "Suriname")
+nicaragua       <- CountryModel %>% filter(country == "Nicaragua")
+puertorico    <- CountryModel %>% filter(country == "Puerto Rico")
 
 
 # East Asia
@@ -43,7 +51,6 @@ ggplot(thai, aes(fill=seropositivity, y=N, x=Age)) +
   theme_ipsum(plot_title_size = 10)+
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-
 ggplot(indonesia1, aes(fill=seropositivity, y=N, x=Age)) + 
   geom_bar(position="fill", stat="identity") +
   scale_fill_viridis(discrete = T) +
@@ -51,7 +58,7 @@ ggplot(indonesia1, aes(fill=seropositivity, y=N, x=Age)) +
   ggtitle("Seropositivity in Indonesia 2013-2016") +
   theme_ipsum(plot_title_size = 10)+
   theme(axis.text.x = element_text(angle = 45, hjust = 1))+
-  #scale_y_continuous(limits = c(0, 500), breaks = c(0,100,200,300,400,500),labels = scales::number_format(big.mark = ','))+
+#scale_y_continuous(limits = c(0, 500), breaks = c(0,100,200,300,400,500),labels = scales::number_format(big.mark = ','))+
   scale_x_discrete(limits = c("1-5", "5-18", "18-45", "46-65", "66-Max"))
 
 
@@ -294,4 +301,6 @@ ggplot(nigeria, aes(fill=seropositivity, y=N, x=Age)) +
   theme_ipsum(plot_title_size = 10)+
   theme(axis.text.x = element_text(angle = 45, hjust = 1))+
   scale_x_discrete(limits = c("5-14", "15-29", "30-44","45-59","60-74","75-80"))
+
+
 
