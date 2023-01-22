@@ -87,8 +87,6 @@ for(jj in 1:ncol(outDf)){
   colnames(df_upperLowerSus) <- c('agemid', 'mean', 'upper', 'lower')
 }
 
-
-
 infectious <- data.frame(1 - df_upperLower$mean)
 
 colnames(df_upperLower) <- c('Age', 'susceptible', 'upper', 'lower', 'infectious')

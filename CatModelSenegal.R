@@ -26,6 +26,17 @@ df_chik[,c("midpoint","lower","upper")] = binom.confint(df_chik$N.pos, df_chik$N
 
 senegal <- df_chik[df_chik$country == "Senegal",]
 
+# simple catalytic model
+jcode <- "model{ 
+	for (i in 21:25){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] <- 1 - exp(-lambda*age[i])
+	}
+	#  prior dists
+  lambda ~ dunif(0,10)       #uninformative prior
+}"
+paramVectorSimple <- c("lambda")
+
 # discrete FOI model (estimate time point where FOI changes: 1 time change)
 jcode <- "model{ 
 	for (i in 21:25){
@@ -196,7 +207,7 @@ jdat = list(n.pos= df_chik$N.pos,
             age=df_chik$agemid)
 jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
 update(jmod, 500)
-jpos = coda.samples(jmod, paramVectorEpi5, n.iter=mcmc.length)
+jpos = coda.samples(jmod, paramVectorSimple, n.iter=mcmc.length)
 
 summary(jpos) 
 mcmcMatrix <- as.matrix(jpos)
@@ -234,6 +245,22 @@ ager3=14:25
 ager4=26:45
 ager5=46:66
 ager6=67:80
+
+# generate ramdomNmber for simple model
+for(ii in 1:length(paramVectorSimple)) {
+  
+  outDf <- matrix(NA,nrow=numSamples, ncol = length(ager))
+
+  for (kk in 1:numSamples ) {
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+    
+    lambdaSample <- mcmcMatrix[randomNumber,"lambda"]
+
+    newRow <- 1-exp(-lambdaSample*ager)
+    
+    outDf[kk,] <- newRow
+  }
+}
 
 # generate ramdomNmber for credible interval (for 1 point change)
 for(ii in 1:length(paramVectorSenegal)) {
