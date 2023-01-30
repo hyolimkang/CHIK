@@ -207,7 +207,7 @@ jdat = list(n.pos= df_chik$N.pos,
             age=df_chik$agemid)
 jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
 update(jmod, 500)
-jpos = coda.samples(jmod, paramVectorSimple, n.iter=mcmc.length)
+jpos = coda.samples(jmod, paramVectorEpi2, n.iter=mcmc.length)
 
 summary(jpos) 
 mcmcMatrix <- as.matrix(jpos)
@@ -517,6 +517,39 @@ ggplot(FOIdata, aes(x= year, y = lambda, fill = year)) +  # Change filling color
   theme_ipsum()+
   scale_fill_viridis(discrete=TRUE) +
   scale_color_viridis(discrete=TRUE)
+
+# Incidence calculation for epimodel 2
+ager <- seq(1:80)
+IncidenceDf  <- matrix(NA,nrow=numSamples, ncol = 80)
+IncidenceRow <- matrix(NA,nrow=80, ncol = 1)
+for(i in 1:numSamples) {
+  randomNumber  <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+  lambdaSample  <- mcmcMatrix[randomNumber,3]
+  for(j in seq_along(ager)) {
+    if (j>6 && j<8) {
+      IncidenceRow[j,] <- exp(-lambdaSample)
+    } else if (j>13 && j<15) {
+      IncidenceRow[j,] <- exp(-lambdaSample) - exp(-lambdaSample*2)
+    } else {
+      IncidenceRow[j,] <- 0
+    }
+  }
+  IncidenceDf[i,] <- IncidenceRow
+}
+
+IncidenceDf <- as.data.frame(IncidenceDf)
+colnames(IncidenceDf) <- c(1:80)
+IncLong <- stack(IncidenceDf)
+colnames(IncLong) <- c("incidence", "age")
+
+ggplot(IncLong, aes(x= age, y = incidence, fill = age)) +  # Change filling color
+  geom_boxplot(show.legend = FALSE, outlier.shape = NA)+
+  theme_ipsum()+
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1, size = 7))+
+  scale_fill_viridis(discrete=TRUE) +
+  scale_color_viridis(discrete=TRUE)
+
+
   
 
 #######################Zambia (age vary) ####################
