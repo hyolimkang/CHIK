@@ -128,6 +128,9 @@ jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
 summary(jpos) 
 mcmcMatrix <- as.matrix(jpos)
 
+# Calculate DIC
+dic.samples(jmod, n.iter = mcmc.length)
+
 #age range
 ager=1:80
 numSamples = 1000
@@ -561,24 +564,6 @@ for(jj in 1:ncol(outDf)){
   colnames(df_upperLower_1) <- c('agemid', 'mean', 'upper', 'lower')
 }
 
-
-#sampling uncertainty
-
-ageVector1 <- study153$agemid 
-ageTotals1 <- study153$N
-
-SampUncertainMCMC_1 <- mcmcRandomSamplerCatTimeDiscrete(1000, mcmcMatrix, ageVector1, ageTotals1)
-ageQuantSamp_1      <- ageQuantiles(SampUncertainMCMC_1)
-
-lambdaEst <- outDf %>% quantile(probs=c(.5,.025,.975))
-
-df_sampling_1 = data.frame(
-  midpoint = datA1$agemid,
-  mean = 1 - exp(-study153$agemid*(lambdaEst[1])),
-  upper = ageQuantSamp_1[,3],
-  lower = ageQuantSamp_1[,2]
-)
-
 #serograph
 ggplot()+
   geom_line(data = df_upperLower_1, aes(x=agemid, y=mean), color = "#558C8C")+
@@ -591,3 +576,395 @@ ggplot()+
   xlab("Age (years)") + ylab("Proportion Seropositive")+
   ggtitle("Seropositive in Haiti (EW, Rogier et al)")+
   theme(plot.title = element_text(color="black", size=10))
+
+######### Epidemic Model ################
+## study 124
+##simple model 
+jcode <- "model{ 
+	for (i in 17:20){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] <- 1-exp(-lambda*age[i])
+	}
+	#  prior dists
+  lambda ~ dunif(0,1)       #uninformative prior
+}"
+paramVectorSimple <- c("lambda")
+
+## 1 epidemic model 
+jcode <- "model{ 
+	for (i in 17:20){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i] < (2019-delta),0,
+                            1-exp(-lambda))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda ~ dunif(0,1)       #uninformative prior
+  delta  ~ dunif(2005,2019) #uninformative prior
+}"
+paramVectorEpi1 <- c("lambda", "delta")
+
+# epimodel 2 
+jcode <- "model{ 
+	for (i in 17:20){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i]> (2019-delta2), 1-exp(-2*lambda)
+       ,ifelse(age[i]> (2019-delta1) && age[i] < 14, 1-exp(-lambda),
+       0))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda  ~ dunif(0,1)       #uninformative prior
+  delta1  ~ dunif(2006,2019)
+  delta2  ~ dunif(1990,2004)
+}"
+paramVectorEpi2 <- c("lambda", "delta1", "delta2")
+
+# epimodel 3 
+jcode <- "model{ 
+	for (i in 17:20){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i]> (2019-delta3), 1-exp(-3*lambda),
+        ifelse(age[i]> (2019-delta2) && age[i] < 30, 1-exp(-2*lambda),
+        ifelse(age[i]> (2019-delta1) && age[i] < 14, 1-exp(-lambda),
+        0)))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda  ~ dunif(0,1)       #uninformative prior
+  delta1  ~ dunif(2006,2019)
+  delta2  ~ dunif(1990,2004)
+  delta3  ~ dunif(1960,1988)
+}"
+paramVectorEpi3 <- c("lambda","delta1", "delta2", "delta3")
+
+# Run model
+mcmc.length=50000
+jdat = list(n.pos= df_lac$N.pos,
+            N=df_lac$N,
+            age=df_lac$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVectorEpi2, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix <- as.matrix(jpos)
+
+# Calculate DIC
+dic.samples(jmod, n.iter = mcmc.length)
+
+
+# age range for epimodel 1 
+ager=1:80
+ager1=1:4
+ager2=5:80
+
+# age range for epimodel2
+ager=0:80
+ager1=0:3
+ager2=4:18
+ager3=19:80
+
+# age range for epimodel3
+ager=0:80
+ager1=0:3
+ager2=4:18
+ager3=19:38
+ager4=39:80
+
+# generate ramdomNumber for epidemic model (epi1)
+for(ii in 1:length(paramVectorEpi1)) {
+  
+  outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+  outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+  
+  
+  for (kk in 1:numSamples ) {
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+    
+    lambdaSample <- mcmcMatrix[randomNumber,"lambda"]
+    deltaSample  <- mcmcMatrix[randomNumber,"delta"]
+    
+    newRow_1 <- 0
+    newRow_2 <- 1-exp(-lambdaSample)
+    
+    outDf_1[kk,] <- newRow_1
+    outDf_2[kk,] <- newRow_2
+    
+    outDf <- cbind(outDf_1,outDf_2)
+  }
+}
+
+# generate ramdomNmber for epidemic model (epi2)
+for(ii in 1:length(paramVectorEpi2)) {
+  
+  outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+  outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+  outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(ager3))
+  
+  for (kk in 1:numSamples ) {
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+    
+    lambdaSample   <- mcmcMatrix[randomNumber,"lambda"]
+    deltaSample_1  <- mcmcMatrix[randomNumber,"delta1"]
+    deltaSample_2  <- mcmcMatrix[randomNumber,"delta2"]
+    
+    newRow_1 <- 0
+    newRow_2 <- 1-exp(-lambdaSample)
+    newRow_3 <- 1-exp(-lambdaSample*2)
+    
+    outDf_1[kk,] <- newRow_1
+    outDf_2[kk,] <- newRow_2
+    outDf_3[kk,] <- newRow_3
+    
+    outDf <- cbind(outDf_1,outDf_2,outDf_3)
+  }
+}
+
+# generate ramdomNmber for epidemic model (epi3)
+for(ii in 1:length(paramVectorEpi3)) {
+  
+  outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+  outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+  outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(ager3))
+  outDf_4 <- matrix(NA,nrow=numSamples, ncol = length(ager4))
+  
+  for (kk in 1:numSamples ) {
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+    
+    lambdaSample    <- mcmcMatrix[randomNumber,"lambda"]
+    deltaSample_1   <- mcmcMatrix[randomNumber,"delta1"]
+    deltaSample_2   <- mcmcMatrix[randomNumber,"delta2"]
+    deltaSample_3   <- mcmcMatrix[randomNumber,"delta3"]
+    
+    newRow_1 <- 0
+    newRow_2 <- 1-exp(-lambdaSample)
+    newRow_3 <- 1-exp(-(2*lambdaSample))
+    newRow_4 <- 1-exp(-(3*lambdaSample))
+    
+    outDf_1[kk,] <- newRow_1
+    outDf_2[kk,] <- newRow_2
+    outDf_3[kk,] <- newRow_3
+    outDf_4[kk,] <- newRow_4
+    
+    outDf <- cbind(outDf_1,outDf_2,outDf_3,outDf_4)
+  }
+}
+
+# get quantile matrices 
+quantileMatrix_1 <- matrix(NA,nrow=ncol(outDf), ncol = 3)
+for(jj in 1:ncol(outDf)){
+  quantiles <- outDf[,jj] %>% quantile(probs=c(.5,.025,.975))
+  quantileMatrix_1[jj,] <- quantiles
+  df_upperLower_1 <- cbind(ager, quantileMatrix_1)
+  df_upperLower_1 <- as.data.frame(df_upperLower_1)
+  colnames(df_upperLower_1) <- c('agemid', 'mean', 'upper', 'lower')
+}
+
+ggplot()+
+  geom_line(data = df_upperLower_1, aes(x=agemid, y=mean), color = "#558C8C")+
+  geom_ribbon(data = df_upperLower_1, alpha=0.2, aes(x=agemid, y=mean, ymin=lower, ymax=upper), fill = "#558C8C")+
+  geom_point(data = study124, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+  geom_linerange(data = study124, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+
+  theme_ipsum(plot_title_size = 10)+
+  scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+  ylim(0, 1)+
+  xlab("Age (years)") + ylab("Proportion Seropositive")+
+  ggtitle("3 Epidemic: Seropositive in Brazil (Braga et al)")+
+  theme(plot.title = element_text(color="black", size=10))
+
+###study 260 Epidemic models 
+##simple model 
+jcode <- "model{ 
+	for (i in 74:78){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] <- 1-exp(-lambda*age[i])
+	}
+	#  prior dists
+  lambda ~ dunif(0,1)       #uninformative prior
+}"
+paramVectorSimple <- c("lambda")
+
+## 1 epidemic model 
+jcode <- "model{ 
+	for (i in 74:78){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i] < (2019-delta),0,
+                            1-exp(-lambda))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda ~ dunif(0,1)       #uninformative prior
+  delta  ~ dunif(2010,2018) #uninformative prior
+}"
+paramVectorEpi1 <- c("lambda", "delta")
+
+# epimodel 2 
+jcode <- "model{ 
+	for (i in 74:78){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i]> (2019-delta2), 1-exp(-2*lambda)
+       ,ifelse(age[i]> (2019-delta1) && age[i] < 10, 1-exp(-lambda),
+       0))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda  ~ dunif(0,1)       #uninformative prior
+  delta1  ~ dunif(2010,2018)
+  delta2  ~ dunif(2000,2008)
+}"
+paramVectorEpi2 <- c("lambda", "delta1", "delta2")
+
+# epimodel 3 
+jcode <- "model{ 
+	for (i in 74:78){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i]> (2019-delta3), 1-exp(-3*lambda),
+        ifelse(age[i]> (2019-delta2) && age[i] < 20, 1-exp(-2*lambda),
+        ifelse(age[i]> (2019-delta1) && age[i] < 10, 1-exp(-lambda),
+        0)))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda  ~ dunif(0,1)       #uninformative prior
+  delta1  ~ dunif(2010,2018)
+  delta2  ~ dunif(2000,2008)
+  delta3  ~ dunif(1990,1998)
+}"
+paramVectorEpi3 <- c("lambda","delta1", "delta2", "delta3")
+
+# Run model
+mcmc.length=50000
+jdat = list(n.pos= df_lac$N.pos,
+            N=df_lac$N,
+            age=df_lac$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVectorEpi3, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix <- as.matrix(jpos)
+
+# Calculate DIC
+dic.samples(jmod, n.iter = mcmc.length)
+
+# age range for epimodel 1 
+ager=0:80
+ager1=0:3
+ager2=4:80
+
+# age range for epimodel2
+ager=0:80
+ager1=0:3
+ager2=4:13
+ager3=14:80
+
+# age range for epimodel3
+ager=0:80
+ager1=0:3
+ager2=4:13
+ager3=14:23
+ager4=24:80
+
+# generate ramdomNumber for epidemic model (epi1)
+for(ii in 1:length(paramVectorEpi1)) {
+  
+  outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+  outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+  
+  
+  for (kk in 1:numSamples ) {
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+    
+    lambdaSample <- mcmcMatrix[randomNumber,"lambda"]
+    deltaSample  <- mcmcMatrix[randomNumber,"delta"]
+    
+    newRow_1 <- 0
+    newRow_2 <- 1-exp(-lambdaSample)
+    
+    outDf_1[kk,] <- newRow_1
+    outDf_2[kk,] <- newRow_2
+    
+    outDf <- cbind(outDf_1,outDf_2)
+  }
+}
+
+# generate ramdomNmber for epidemic model (epi2)
+for(ii in 1:length(paramVectorEpi2)) {
+  
+  outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+  outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+  outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(ager3))
+  
+  for (kk in 1:numSamples ) {
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+    
+    lambdaSample   <- mcmcMatrix[randomNumber,"lambda"]
+    deltaSample_1  <- mcmcMatrix[randomNumber,"delta1"]
+    deltaSample_2  <- mcmcMatrix[randomNumber,"delta2"]
+    
+    newRow_1 <- 0
+    newRow_2 <- 1-exp(-lambdaSample)
+    newRow_3 <- 1-exp(-lambdaSample*2)
+    
+    outDf_1[kk,] <- newRow_1
+    outDf_2[kk,] <- newRow_2
+    outDf_3[kk,] <- newRow_3
+    
+    outDf <- cbind(outDf_1,outDf_2,outDf_3)
+  }
+}
+
+# generate ramdomNmber for epidemic model (epi3)
+for(ii in 1:length(paramVectorEpi3)) {
+  
+  outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+  outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+  outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(ager3))
+  outDf_4 <- matrix(NA,nrow=numSamples, ncol = length(ager4))
+  
+  for (kk in 1:numSamples ) {
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+    
+    lambdaSample    <- mcmcMatrix[randomNumber,"lambda"]
+    deltaSample_1   <- mcmcMatrix[randomNumber,"delta1"]
+    deltaSample_2   <- mcmcMatrix[randomNumber,"delta2"]
+    deltaSample_3   <- mcmcMatrix[randomNumber,"delta3"]
+    
+    newRow_1 <- 0
+    newRow_2 <- 1-exp(-lambdaSample)
+    newRow_3 <- 1-exp(-(2*lambdaSample))
+    newRow_4 <- 1-exp(-(3*lambdaSample))
+    
+    outDf_1[kk,] <- newRow_1
+    outDf_2[kk,] <- newRow_2
+    outDf_3[kk,] <- newRow_3
+    outDf_4[kk,] <- newRow_4
+    
+    outDf <- cbind(outDf_1,outDf_2,outDf_3,outDf_4)
+  }
+}
+
+# get quantile matrices 
+quantileMatrix_1 <- matrix(NA,nrow=ncol(outDf), ncol = 3)
+for(jj in 1:ncol(outDf)){
+  quantiles <- outDf[,jj] %>% quantile(probs=c(.5,.025,.975))
+  quantileMatrix_1[jj,] <- quantiles
+  df_upperLower_1 <- cbind(ager, quantileMatrix_1)
+  df_upperLower_1 <- as.data.frame(df_upperLower_1)
+  colnames(df_upperLower_1) <- c('agemid', 'mean', 'upper', 'lower')
+}
+
+ggplot()+
+  geom_line(data = df_upperLower_1, aes(x=agemid, y=mean), color = "#558C8C")+
+  geom_ribbon(data = df_upperLower_1, alpha=0.2, aes(x=agemid, y=mean, ymin=lower, ymax=upper), fill = "#558C8C")+
+  geom_point(data = study260, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+  geom_linerange(data = study260, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+
+  theme_ipsum(plot_title_size = 10)+
+  scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+  ylim(0, 1)+
+  xlab("Age (years)") + ylab("Proportion Seropositive")+
+  ggtitle("3 Epidemic: Seropositive in Puerto Rico (Adams et al)")+
+  theme(plot.title = element_text(color="black", size=10))
+
+

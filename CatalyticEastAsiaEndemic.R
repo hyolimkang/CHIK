@@ -112,12 +112,6 @@ for(ii in 1:length(paramVector)) {
   for (kk in 1:numSamples ) {
     randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
     
-    #lambdaSample_1 <- mcmcMatrix[randomNumber,"lambda1"]
-    #lambdaSample_2 <- mcmcMatrix[randomNumber,"lambda2"]
-    #lambdaSample_3 <- mcmcMatrix[randomNumber,"lambda3"]
-    #lambdaSample_4 <- mcmcMatrix[randomNumber,"lambda4"]
-    #lambdaSample_5 <- mcmcMatrix[randomNumber,"lambda5"]
-    
     lambdas <- list("lambda1", "lambda2", "lambda3",
                     "lambda4","lambda5","lambda6",
                     "lambda7","lambda8","lambda9")
@@ -383,7 +377,6 @@ mcmc %>%
 ## incidence by every age : exp(-lambda(a))-exp(-lambda(a+1))
 ager <- seq(1:80)
 
-
 for(i in 1:9) {
   assign(paste0("IncidenceRow", i), matrix(NA, nrow=80, ncol = 1))
   assign(paste0("IncidenceDf",  i), matrix(NA, nrow=numSamples, ncol = 80))
@@ -621,23 +614,48 @@ for(i in 1:80) {
   ThaiSuspop2020 <- thaipop[11,i]*susprop3
 }
 
-Case3_2010     <- ThaiSuspop2010*(IncidenceDf3*1/100000)
-Case3_2011     <- ThaiSuspop2011*(IncidenceDf3*1/100000)
-
 thaisuspop_list <- mget(ls(pattern = "ThaiSuspop"))   # store dataframes into a list
 
 for(i in 1:11) {
-  for(j in 2010:2020){
-    assign(paste0("Case3_", i), thaisuspop_list[[i]]*(IncidenceDf3*1/100000))
+    assign(paste0("case3_", i), thaisuspop_list[[i]]*(IncidenceDf3*1/100000))
   }  
+
+
+caselist <- mget(ls(pattern = "case3_"))
+
+for(i in 1:11){
+  caselist[[i]]$tot <- rowSums(caselist[[i]][,c(1:80)])
 }
+caselist <- data.frame(caselist) 
 
+totlist <- caselist[,c("case3_1.tot","case3_2.tot","case3_3.tot",
+                       "case3_4.tot","case3_5.tot","case3_6.tot",
+                       "case3_7.tot","case3_8.tot","case3_9.tot",
+                       "case3_10.tot","case3_11.tot")]
 
+totlist <- stack(totlist)
+totlist$year <- c(NA)
+totlist$year[totlist$ind == "case3_1.tot"] <- "2010"
+totlist$year[totlist$ind == "case3_2.tot"] <- "2011"
+totlist$year[totlist$ind == "case3_3.tot"] <- "2012"
+totlist$year[totlist$ind == "case3_4.tot"] <- "2013"
+totlist$year[totlist$ind == "case3_5.tot"] <- "2014"
+totlist$year[totlist$ind == "case3_6.tot"] <- "2015"
+totlist$year[totlist$ind == "case3_7.tot"] <- "2016"
+totlist$year[totlist$ind == "case3_8.tot"] <- "2017"
+totlist$year[totlist$ind == "case3_9.tot"] <- "2018"
+totlist$year[totlist$ind == "case3_10.tot"] <- "2019"
+totlist$year[totlist$ind == "case3_11.tot"] <- "2020"
+colnames(totlist)[1] <- "Cases"
 
-
-#Case3_2010$tot <- rowSums(Case3_2010[,c(1:80)])
-LongCase3_2010 <- stack(Case3_2010)
-LongCase3_2011 <- stack(Case3_2011)
+# 2010-2020 total burden 
+ggplot(totlist, aes(x= year, y = Cases, fill = year)) +  # Change filling color
+  geom_boxplot(show.legend = FALSE, outlier.shape = NA)+
+  theme_ipsum(plot_title_size = 10)+
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1, size = 7))+
+  scale_fill_viridis(discrete=TRUE) +
+  scale_color_viridis(discrete=TRUE) +
+  ggtitle("Total number of cases by year in Thailand (2010-2020)")
 
 # incidence boxplot (/100,000)
 ggplot(IncLong1, aes(x= age, y = incidence, fill = age)) +  # Change filling color
@@ -818,223 +836,193 @@ AnnIncidenceDf[,6] <- (IncidenceDf[,6]/k[6])*1000
 AnnIncidenceDf[,7] <- (IncidenceDf[,7]/k[7])*1000
 View(AnnIncidenceDf)
 
-## incidence by every age : exp(-lambda(a))-exp(-lambda(a+1))
-ager <- seq(1:80)
-IncidenceDf  <- matrix(NA,nrow=numSamples, ncol = 80)
-IncidenceRow <- matrix(NA,nrow=80, ncol = 1)
 
-for(i in 1:numSamples) {
-  randomNumber  <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
-  lambdaSample  <- mcmcMatrix[randomNumber,1]
-for(j in seq_along(ager)) {
-  if (j<80) {
-    IncidenceRow[j,] <- exp(-lambdaSample*ager[j])-exp(-lambdaSample*ager[j+1]) 
-  } else {
-    IncidenceRow[j,] <- exp(-lambdaSample*ager[j])-exp(-lambdaSample*81)
+options(scipen = 999)
+### Epidemic model 
+# epimodel 1 
+jcode <- "model{ 
+	for (i in 25:29){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i] < (2003-delta),0,
+                            1-exp(-lambda))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda ~ dunif(0,1)       #uninformative prior
+  delta  ~ dunif(1995,2002) #uninformative prior
+}"
+paramVectorEpi1 <- c("lambda", "delta")
+
+# epimodel 2 
+jcode <- "model{ 
+	for (i in 25:29){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i]> (2003-delta2), 1-exp(-2*lambda)
+       ,ifelse(age[i]> (2003-delta1) && age[i] < 9, 1-exp(-lambda),
+       0))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda  ~ dunif(0,1)       #uninformative prior
+  delta1  ~ dunif(1995,2002)
+  delta2  ~ dunif(1984,1994)
+}"
+paramVectorEpi2 <- c("lambda", "delta1", "delta2")
+
+# epimodel 3 
+jcode <- "model{ 
+	for (i in 25:29){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i]> (2003-delta3), 1-exp(-3*lambda),
+        ifelse(age[i]> (2003-delta2) && age[i] < 19, 1-exp(-2*lambda),
+        ifelse(age[i]> (2003-delta1) && age[i] < 9, 1-exp(-lambda),
+        0)))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda  ~ dunif(0,1)       #uninformative prior
+  delta1  ~ dunif(1995,2002)
+  delta2  ~ dunif(1984,1994)
+  delta3  ~ dunif(1975,1983)
+}"
+paramVectorEpi3 <- c("lambda","delta1", "delta2", "delta3")
+
+
+# Run model
+mcmc.length=50000
+jdat = list(n.pos= df_asia$N.pos,
+            N=df_asia$N,
+            age=df_asia$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVectorEpi1, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix <- as.matrix(jpos)
+
+# age range for epimodel1
+ager=0:80
+ager1=0:3
+ager2=4:80
+
+# age range for epimodel2
+ager=0:80
+ager1=0:3
+ager2=4:11
+ager3=12:80
+
+# age range for epimodel3
+ager=0:80
+ager1=0:2
+ager2=3:11
+ager3=12:22
+ager4=23:80
+
+# generate ramdomNmber for epidemic model (epi1)
+for(ii in 1:length(paramVectorEpi1)) {
+  
+  outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+  outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+  
+  
+  for (kk in 1:numSamples ) {
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+    
+    lambdaSample <- mcmcMatrix[randomNumber,"lambda"]
+    deltaSample  <- mcmcMatrix[randomNumber,"delta"]
+    
+    newRow_1 <- 0
+    newRow_2 <- 1-exp(-lambdaSample)
+    
+    outDf_1[kk,] <- newRow_1
+    outDf_2[kk,] <- newRow_2
+    
+    outDf <- cbind(outDf_1,outDf_2)
   }
 }
-  IncidenceDf[i,] <- IncidenceRow
+
+# generate ramdomNmber for epidemic model (epi2)
+for(ii in 1:length(paramVectorEpi2)) {
+  
+  outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+  outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+  outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(ager3))
+  
+  for (kk in 1:numSamples ) {
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+    
+    lambdaSample   <- mcmcMatrix[randomNumber,"lambda"]
+    deltaSample_1  <- mcmcMatrix[randomNumber,"delta1"]
+    deltaSample_2  <- mcmcMatrix[randomNumber,"delta2"]
+    
+    newRow_1 <- 0
+    newRow_2 <- 1-exp(-lambdaSample)
+    newRow_3 <- 1-exp(-lambdaSample*2)
+    
+    outDf_1[kk,] <- newRow_1
+    outDf_2[kk,] <- newRow_2
+    outDf_3[kk,] <- newRow_3
+    
+    outDf <- cbind(outDf_1,outDf_2,outDf_3)
+  }
 }
-IncidenceDf <- as.data.frame(IncidenceDf)
-colnames(IncidenceDf) <- c(1:80)
-IncLong <- stack(IncidenceDf)
-colnames(IncLong) <- c("incidence", "age")
 
-# susceptible prop
-sus_prop <- 1-outDf_1
+# generate ramdomNmber for epidemic model (epi3)
+for(ii in 1:length(paramVectorEpi3)) {
+  
+  outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+  outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+  outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(ager3))
+  outDf_4 <- matrix(NA,nrow=numSamples, ncol = length(ager4))
+  
+  for (kk in 1:numSamples ) {
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+    
+    lambdaSample    <- mcmcMatrix[randomNumber,"lambda"]
+    deltaSample_1   <- mcmcMatrix[randomNumber,"delta1"]
+    deltaSample_2   <- mcmcMatrix[randomNumber,"delta2"]
+    deltaSample_3   <- mcmcMatrix[randomNumber,"delta3"]
+    
+    newRow_1 <- 0
+    newRow_2 <- 1-exp(-lambdaSample)
+    newRow_3 <- 1-exp(-(2*lambdaSample))
+    newRow_4 <- 1-exp(-(3*lambdaSample))
+    
+    outDf_1[kk,] <- newRow_1
+    outDf_2[kk,] <- newRow_2
+    outDf_3[kk,] <- newRow_3
+    outDf_4[kk,] <- newRow_4
+    
+    outDf <- cbind(outDf_1,outDf_2,outDf_3,outDf_4)
+  }
+}
 
-# tot pop
-WPP2022_POP_F01_1_POPULATION_SINGLE_AGE_BOTH_SEXES <- read_excel("~/Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/code/WPP2022_POP_F01_1_POPULATION_SINGLE_AGE_BOTH_SEXES.xlsx", 
-                                                                 sheet = "thai")
-pop <-WPP2022_POP_F01_1_POPULATION_SINGLE_AGE_BOTH_SEXES
-pop <- pop*1000 
+# get quantile matrices 
+quantileMatrix_1 <- matrix(NA,nrow=ncol(outDf), ncol = 3)
+for(jj in 1:ncol(outDf)){
+  quantiles <- outDf[,jj] %>% quantile(probs=c(.5,.025,.975))
+  quantileMatrix_1[jj,] <- quantiles
+  df_upperLower_1 <- cbind(ager, quantileMatrix_1)
+  df_upperLower_1 <- as.data.frame(df_upperLower_1)
+  colnames(df_upperLower_1) <- c('agemid', 'mean', 'upper', 'lower')
+}
 
-# sus pop
-sus_pop <- pop*sus_prop
-susLong <- stack(sus_pop)
-colnames(susLong) <- c("susceptible", "age")
-#cases
-cases <- sus_pop*IncidenceDf
-caseLong <- stack(cases)
-colnames(caseLong) <- c("case", "age")
-
-
-# incidence (/100,000)
-ggplot(IncLong, aes(x= age, y = incidence, fill = age)) +  # Change filling color
-  geom_boxplot(show.legend = FALSE, outlier.shape = NA)+
+ggplot()+
+  geom_line(data = df_upperLower_1, aes(x=agemid, y=mean), color = "#558C8C")+
+  geom_ribbon(data = df_upperLower_1, alpha=0.2, aes(x=agemid, y=mean, ymin=lower, ymax=upper), fill = "#558C8C")+
+  geom_point(data = study234, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+  geom_linerange(data = study234, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+
   theme_ipsum()+
-  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1, size = 7))+
-  scale_fill_viridis(discrete=TRUE) +
-  scale_color_viridis(discrete=TRUE)
-# cases
-ggplot(caseLong, aes(x= age, y = case, fill = age)) +  # Change filling color
-  geom_boxplot(show.legend = FALSE, outlier.shape = NA)+
-  theme_ipsum()+
-  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1, size = 7))+
-  scale_fill_viridis(discrete=TRUE) +
-  scale_color_viridis(discrete=TRUE)
-#sus pop
-options(scipen = 999)
-ggplot(susLong, aes(x= age, y = susceptible, fill = age)) +  # Change filling color
-  geom_boxplot(show.legend = FALSE, outlier.shape = NA)+
-  theme_ipsum()+
-  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1, size = 7))+
-  scale_fill_viridis(discrete=TRUE) +
-  scale_color_viridis(discrete=TRUE)
+  scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+  ylim(0, 1)+
+  xlab("Age (years)") + ylab("Proportion Seropositive")+
+  ggtitle("1 Epidemic: Seropositive in Indonesia (K.Laras)")+
+  theme(plot.title = element_text(color="black", size=10))
 
-
-
-quantiles <- matrix(NA, nrow=3, ncol=80)
-qrange    <- c(0.5,0.025,0.975)
-for(i in 1:3){
-  quantiles[i,] <- apply(IncidenceDf[1:80], 2 , quantile , probs = qrange[i] , na.rm = TRUE)
-}
-quantiles <- as.data.frame(quantiles)
-quantiles[nrow(quantiles) + 1,] <- c(1:80)
-
-quantiles$range <- c("mid","lo","hi", "age")
-long$value <- as.numeric(gsub(",", "", long$value))
-
-colnames(quantiles) <- c(1:80)
-
-#https://towardsdatascience.com/wide-to-long-data-how-and-when-to-use-pandas-melt-stack-and-wide-to-long-7c1e0f462a98
-
-quantile_long <- matrix(NA,nrow=ncol(IncidenceDf), ncol = 3)
-for(jj in 1:ncol(IncidenceDf)){
-  quantiles <- IncidenceDf[,jj] %>% quantile(probs=c(.5,.025,.975))
-  quantile_long[jj,] <- quantiles
-  df_upperLower_Case <- cbind(ager, quantile_long)
-  df_upperLower_Case <- as.data.frame(df_upperLower_Case)
-  colnames(df_upperLower_Case) <- c('agemid', 'mean', 'lo', 'hi')
-}
-
-df_upperLower_Case <- df_upperLower_Case %>% mutate(sd = hi - lo)
-
-
-## bargraph 
-ager <-c(1:7)
-quantileMatrix <- matrix(NA,nrow=ncol(AnnIncidenceDf), ncol = 3)
-for(jj in 1:ncol(AnnIncidenceDf)){
-  quantiles <- AnnIncidenceDf[,jj] %>% quantile(probs=c(.5,.025,.975))
-  quantileMatrix[jj,] <- quantiles
-  df_upperLower <- cbind(ager, quantileMatrix)
-  df_upperLower <- as.data.frame(df_upperLower)
-  colnames(df_upperLower) <- c('age', 'mean', 'lower', 'upper')
-}
-View(df_upperLower)
-write_xlsx(df_upperLower,"incidence.xlsx")
-
-plot_ly(data=df_upperLower, x = ~age, y = ~mean, type = 'box', name = 'incidence') %>%
-  layout(yaxis = list(title = 'Annual Incidence(/100,000'), barmode = 'stack')
-
-agegr1 = data.frame(AnnIncidenceDf[,1])
-agegr2 = data.frame(AnnIncidenceDf[,2])
-agegr3 = data.frame(AnnIncidenceDf[,3])
-agegr4 = data.frame(AnnIncidenceDf[,4])
-agegr5 = data.frame(AnnIncidenceDf[,5])
-agegr6 = data.frame(AnnIncidenceDf[,6])
-agegr7 = data.frame(AnnIncidenceDf[,7])
-
-colnames(agegr1)[1] <- "Incidence"
-colnames(agegr2)[1] <- "Incidence"
-colnames(agegr3)[1] <- "Incidence"
-colnames(agegr4)[1] <- "Incidence"
-colnames(agegr5)[1] <- "Incidence"
-colnames(agegr6)[1] <- "Incidence"
-colnames(agegr7)[1] <- "Incidence"
-
-agegr1$age <- c("1-4")
-agegr2$age <- c("5-9")
-agegr3$age <- c("10-14")
-agegr4$age <- c("15-19")
-agegr5$age <- c("20-39")
-agegr6$age <- c("40-64")
-agegr7$age <- c("65-80")
-
-IncidenceTot <- rbind(agegr1,agegr2,agegr3,agegr4,agegr5,agegr6,agegr7)
-
-IncidenceTot$age <- factor(IncidenceTot$age, levels = c("1-4", "5-9", "10-14", "15-19", "20-39",
-                                                        "40-64", "65-80"))
-
-ggplot(IncidenceTot, aes(x= age, y = Incidence, fill = age)) +  # Change filling color
-  geom_boxplot()+
-  theme_ipsum()+
-  scale_fill_viridis(discrete=TRUE) +
-  scale_color_viridis(discrete=TRUE)+
-  scale_x_discrete(limits = c("1-4", "5-9", "10-14", "15-19", "20-39",
-                              "40-64", "65-80"))
+# Calculate DIC
+dic.samples(jmod, n.iter = mcmc.length)
 
 
 
 
-#Susceptible pop
-SusProp <- matrix(NA, nrow = numSamples, ncol = 7)
 
-SusProp[,1] <- outDf[,4]
-SusProp[,2] <- outDf[,9]-outDf[,4]
-SusProp[,3] <- outDf[,14]-outDf[,9]
-SusProp[,4] <- outDf[,19]-outDf[,14]
-SusProp[,5] <- outDf[,39]-outDf[,19]
-SusProp[,6] <- outDf[,64]-outDf[,39]
-SusProp[,7] <- outDf[,80]-outDf[,64]
-
-#Susceptible N = N* SProp
-WPP2022_POP_F01_1_POPULATION_SINGLE_AGE_BOTH_SEXES <- read_excel("~/Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/code/WPP2022_POP_F01_1_POPULATION_SINGLE_AGE_BOTH_SEXES.xlsx", 
-                                                                 sheet = "thai_group")
-View(WPP2022_POP_F01_1_POPULATION_SINGLE_AGE_BOTH_SEXES)
-
-pop <-WPP2022_POP_F01_1_POPULATION_SINGLE_AGE_BOTH_SEXES
-pop <- pop*1000 
-
-SusN <- matrix(NA, nrow = numSamples, ncol = 7)
-
-for(i in 1:ncol(SusN)) {
-  SusN[,i] <- SusProp[,i]*pop[1,i]
-}
-View(SusN)
-
-# New Cases (=SusN * Annual Incidence rate)
-NewCases <- matrix(NA, nrow = numSamples, ncol = 7)
-
-for(i in 1:ncol(NewCases)) {
-  NewCases[,i] <- SusN[,i]*AnnIncidenceDf[,i]
-}
-View(NewCases)
-
-# case graph
-case1 = data.frame(NewCases[,1])
-case2 = data.frame(NewCases[,2])
-case3 = data.frame(NewCases[,3])
-case4 = data.frame(NewCases[,4])
-case5 = data.frame(NewCases[,5])
-case6 = data.frame(NewCases[,6])
-case7 = data.frame(NewCases[,7])
-
-colnames(case1)[1] <- "Cases"
-colnames(case2)[1] <- "Cases"
-colnames(case3)[1] <- "Cases"
-colnames(case4)[1] <- "Cases"
-colnames(case5)[1] <- "Cases"
-colnames(case6)[1] <- "Cases"
-colnames(case7)[1] <- "Cases"
-
-case1$age <- c("1-4")
-case2$age <- c("5-9")
-case3$age <- c("10-14")
-case4$age <- c("15-19")
-case5$age <- c("20-39")
-case6$age <- c("40-64")
-case7$age <- c("65-80")
-
-CaseTot <- rbind(case1,case2,case3,case4,case5,case6,case7)
-
-CaseTot$age <- factor(CaseTot$age, levels = c("1-4", "5-9", "10-14", "15-19", "20-39",
-                                                        "40-64", "65-80"))
-
-ggplot(CaseTot, aes(x= age, y = Cases, fill = age)) +  # Change filling color
-  geom_boxplot()+
-  theme_ipsum()+
-  scale_fill_viridis(discrete=TRUE) +
-  scale_color_viridis(discrete=TRUE)+
-  scale_x_discrete(limits = c("1-4", "5-9", "10-14", "15-19", "20-39",
-                              "40-64", "65-80"))
