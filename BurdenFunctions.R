@@ -11,23 +11,47 @@ source("D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1
 #-------------------------------------------------------------------------------
 print (Sys.time ())
  
-# Read CSV file with
-#thaicohort22 <- fread("C:/Users/Hyolim/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/cohortcsv.csv", header = TRUE, stringsAsFactors = FALSE)
-thaicohort22 <- read_excel("D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/epidemic_FOI_Oli.xlsx", 
-                                               sheet = "2022cohort")
+BurdenCalculation <- function(cohort, susprop, IncidenceDf) {
+  
+  # vaccinated population
+  vacc           <- susprop
+  vacc[,1:12]    <- 0
+  vacc[,13]      <- susprop[,13]*0.9*0.7
+  vacc[,13:79]   <- vacc[,13]
+  colnames(vacc) <- paste(0:78)
 
-burden22 <- BurdenCalculation(cohort
-                              = thaicohort22,
-                              susprop     = thaisusprop22,
-                              IncidenceDf = IncidenceDf1)
-
-burden22Df         <- lapply(burden22, as.data.frame)
-suspop_prevacc     <- burden22Df[[1]]
-burden_prevacc     <- burden22Df[[2]]
-susprop_postvacc   <- burden22Df[[3]]
-suspop_postvacc    <- burden22Df[[4]]
-burden_postvacc    <- burden22Df[[5]]
-Impact             <- burden22Df[[6]]
+  # susceptible population (pre-vacc)
+  suspop_prevacc <- cohort*susprop
+  
+  # burden in terms of number of cases (pre-vacc)
+  burden_prevacc <- as.data.frame(suspop_prevacc*IncidenceDf)
+  
+  # post-vacc susceptible proportion
+  susprop_postvacc <- susprop
+  susprop_postvacc[,13:79] <- susprop_postvacc[,13:79]*(1- 0.9*0.7)        # susceptible prop >12yrs old: susceptible*(1-ve*vc)
+  susprop_postvacc <- as.data.frame(susprop_postvacc)
+  colnames(susprop_postvacc) <- paste(0:78)
+  
+  # susceptible population (post-vacc)
+  suspop_postvacc <- as.data.frame(susprop_postvacc*cohort)
+  
+  # burden in terms of number of cases (post-vacc)
+  burden_postvacc <- susprop
+  burden_postvacc <- suspop_postvacc*IncidenceDf   
+  
+  # Impact
+  Impact <- burden_prevacc - burden_postvacc  
+  
+  # return lists
+  return(list(suspop_prevacc   = suspop_prevacc,
+              burden_prevacc   = burden_prevacc,
+              susprop_postvacc = susprop_postvacc,
+              suspop_postvacc  = suspop_postvacc,
+              burden_postvacc  = burden_postvacc,
+              Impact           = Impact,
+              vacc             = vacc))
+  
+}
 
 
 #-------------------------------------------------------------------------------
@@ -72,26 +96,37 @@ allburden <- function(cohort, burden_prevacc, burden_postvacc, IncidenceDf,
   
 }
 
-# check 
-result_burden22 <- allburden(cohort          = thaicohort22,
-                             burden_prevacc  = burden_prevacc, 
-                             burden_postvacc = burden_postvacc, 
-                             IncidenceDf     = IncidenceDf1,
-                             susprop_prevacc = thaisusprop, 
-                             susprop_postvac = susprop_postvacc)
-
 
 #-------------------------------------------------------------------------------
 # start the program 
 #-------------------------------------------------------------------------------
 
-# 1. burden for 2023
+# 1. burden for 2022
+
+thaicohort22 <- read_excel("D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/epidemic_FOI_Oli.xlsx", 
+                           sheet = "2022cohort")
+thaicohort22 <- 1000*thaicohort22
+
+burden22 <- BurdenCalculation(cohort      = thaicohort22,
+                              susprop     = thaisusprop,
+                              IncidenceDf = IncidenceDf1)
+
+burden22Df           <- lapply(burden22, as.data.frame)
+suspop_prevacc22     <- burden22Df[[1]]
+burden_prevacc22     <- burden22Df[[2]]
+susprop_postvacc22   <- burden22Df[[3]]
+suspop_postvacc22    <- burden22Df[[4]]
+burden_postvacc22    <- burden22Df[[5]]
+Impact22             <- burden22Df[[6]]
+
+# 2. burden for 2023
 
 thaicohort23 <- read_excel("D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/epidemic_FOI_Oli.xlsx", 
                            sheet = "2023cohort")
+thaicohort23 <- 1000*thaicohort23
 
 burden23 <- BurdenCalculation(cohort      = thaicohort23,
-                              susprop     = thaisusprop22,
+                              susprop     = thaisusprop,
                               IncidenceDf = IncidenceDf1)
 
 burden23Df           <- lapply(burden23, as.data.frame)
@@ -110,12 +145,13 @@ result_burden23 <- allburden(cohort          = thaicohort23,
                              susprop_prevacc = thaisusprop22, 
                              susprop_postvac = susprop_postvacc23)
 
-# 2. burden for 2024 
+# 3. burden for 2024 
 thaicohort24 <- read_excel("D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/epidemic_FOI_Oli.xlsx", 
                            sheet = "2024cohort")
+thaicohort24 <- 1000*thaicohort24
 
 burden24 <- BurdenCalculation(cohort      = thaicohort24,
-                              susprop     = thaisusprop22,
+                              susprop     = thaisusprop,
                               IncidenceDf = IncidenceDf1)
 
 burden24Df           <- lapply(burden24, as.data.frame)
@@ -134,12 +170,36 @@ result_burden24 <- allburden(cohort          = thaicohort24,
                              susprop_prevacc = thaisusprop22, 
                              susprop_postvac = susprop_postvacc24)
 
+# 4. burden for 2025 
+thaicohort25 <- read_excel("D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/epidemic_FOI_Oli.xlsx", 
+                           sheet = "2025cohort")
+thaicohort25 <- 1000*thaicohort25
+
+burden25 <- BurdenCalculation(cohort      = thaicohort25,
+                              susprop     = thaisusprop,
+                              IncidenceDf = IncidenceDf1)
+
+burden25Df           <- lapply(burden25, as.data.frame)
+suspop_prevacc25     <- burden25Df[[1]]
+burden_prevacc25     <- burden25Df[[2]]
+susprop_postvacc25   <- burden25Df[[3]]
+suspop_postvacc25    <- burden25Df[[4]]
+burden_postvacc25    <- burden25Df[[5]]
+Impact25             <- burden25Df[[6]]
+
+
+result_burden25 <- allburden(cohort          = thaicohort25,
+                             burden_prevacc  = burden_prevacc25, 
+                             burden_postvacc = burden_postvacc25, 
+                             IncidenceDf     = IncidenceDf1,
+                             susprop_prevacc = thaisusprop, 
+                             susprop_postvac = susprop_postvacc25)
 
 
 #------------------------------------------------------------------------------- 
 #save result burden files into a csv 
 #-------------------------------------------------------------------------------
-result <- c("thai22","thai23","thai24")
+result <- c("thai22","thai23","thai24","thai25")
 resultlist <- list()
 for(i in seq_along(result)) {
   filepath <- file.path("D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/codes/CHIK/dataresults", paste0(result[i], "_results.csv")) 
@@ -150,7 +210,7 @@ for(i in seq_along(result)) {
 fwrite(result_burden22, resultlist[[1]])
 fwrite(result_burden23, resultlist[[2]])
 fwrite(result_burden24, resultlist[[3]])
-
+fwrite(result_burden25, resultlist[[4]])
 
 
 #-------------------------------------------------------------------------------
@@ -160,7 +220,7 @@ fwrite(result_burden24, resultlist[[3]])
 combine_burden_estimate <- function () {
   
   # simulation scenarios
-  results = c("thai22", "thai23", "thai24")
+  results = c("thai22", "thai23", "thai24","thai25")
   
   # burden estimates for different simulation scenarios
   allburden <- NULL
@@ -189,5 +249,45 @@ combine_burden_estimate <- function () {
 } # end of function -- combine_burden_estimate
 
 allburden <- combine_burden_estimate()
+
+fwrite(allburden, "D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/codes/CHIK/dataresults/allburden.csv")
+
+
+#-------------------------------------------------------------------------------
+#add burden calculation 
+#-------------------------------------------------------------------------------
+
+
+# Add columns for cases per 1000
+allburden[, cases_p1000 := burden/cohort_size * 1000,
+       by =. (run_id, scenario, bcohort)]
+allburden[, totburden   := sum(burden),
+       by =.(run_id, scenario, bcohort)]
+
+allburden[, totcohort  := sum(cohort_size),
+       by =.(run_id,scenario, bcohort)]
+
+allburden[, cases_p1000_tot := totburden / totcohort * 1000,
+       by =.(run_id,scenario, bcohort)]
+
+allburden[, suspop := cohort_size*susprop,
+       by = . (run_id, scenario, bcohort)]
+
+allburden[scenario == "postvacc", fvp := suspop*0.9*0.7,
+       by =. (run_id,scenario, bcohort)]
+
+allburden[, totvacc := sum(fvp),
+       by =.(run_id,scenario)]
+
+preburden  <- allburden[scenario == "prevacc"]
+postburden <- allburden[scenario == "postvacc"]
+
+vaccine_impact <- preburden [postburden, on = .(run_id = run_id, age=age, bcohort = bcohort)] 
+
+vaccine_impact[, `:=` (cases_averted = burden - i.burden)]
+vaccine_impact[, `:=` (case_averted_perVG = cases_averted / i.fvp * 1000)]
+vaccine_impact[, `:=` (totcases_averted = totburden - i.totburden)]
+vaccine_impact[, `:=` (totcases_averted_perVG = totcases_averted / i.totvacc * 1000)]
+
 
 fwrite(allburden, "D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/codes/CHIK/dataresults/allburden.csv")
