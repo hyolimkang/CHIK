@@ -11,10 +11,23 @@ library(viridis)
 library(hrbrthemes)
 library(ggridges)
 library(plotly)
+library(data.table)
 
 #Read file
-CountryModel <- read_excel("~/Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/1.Aim1/all_countries/CountryModel.xlsx", 
-                           sheet = "inclusion")
+#CountryModel <- read_excel("~/Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/1.Aim1/all_countries/CountryModel.xlsx", 
+#                           sheet = "inclusion")
+#CountryModel <- read_excel("C:/Users/Hyolim/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/CountryModelCSV.xlsx", 
+#                           sheet = "inclusion")
+
+#CountryModel <- read_excel("D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/CountryModel.xlsx", 
+#                           sheet = "inclusion")
+
+#CountryModel             <- "C:/Users/Hyolim/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/CountryModelInclusion.csv"
+CountryModel             <- "D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/CountryModelInclusion.csv"
+CountryModel             <- fread(CountryModel, header = "auto", stringsAsFactors = F)
+
+
+
 View(CountryModel)
 #Rename data
 df_asia = CountryModel %>% filter(region == "EAP")
@@ -99,7 +112,7 @@ summary(jpos)
 mcmcMatrix <- as.matrix(jpos)
 
 #age range
-ager=1:80
+ager=0:78
 numSamples = 1000
 
 # credible interval
@@ -341,6 +354,9 @@ ggplot()+
   ggtitle("Seropositivity in Thailand (Sompong Vongpunsawad et al.)") +
   scale_fill_viridis(discrete = T) 
 
+library("writexl")
+write_xlsx(df_upperLower_3,"seropos.xlsx")
+
 mcmcMatrix <- data.frame(mcmcMatrix)
 mcmc <- stack(mcmcMatrix)
 mcmc$country <- c(NA)
@@ -375,11 +391,11 @@ mcmc %>%
 
 #### Incidence
 ## incidence by every age : exp(-lambda(a))-exp(-lambda(a+1))
-ager <- seq(1:80)
+ager <- seq(0:78)
 
 for(i in 1:9) {
-  assign(paste0("IncidenceRow", i), matrix(NA, nrow=80, ncol = 1))
-  assign(paste0("IncidenceDf",  i), matrix(NA, nrow=numSamples, ncol = 80))
+  assign(paste0("IncidenceRow", i), matrix(NA, nrow=79, ncol = 1))
+  assign(paste0("IncidenceDf",  i), matrix(NA, nrow=numSamples, ncol = 79))
 }
 
 for(i in 1:numSamples) {
@@ -392,13 +408,13 @@ for(i in 1:numSamples) {
   lambdalist <- lapply(paste0("lambdaSample", c(1:9)), get)
   
   for(j in seq_along(ager)) {
-    if (j<80) {
+    if (j<79) {
       IncidenceRow1[j,] <- exp(-lambdaSample1*ager[j])-exp(-lambdaSample1*ager[j+1]) 
     } else {
-      IncidenceRow1[j,] <- exp(-lambdaSample1*ager[j])-exp(-lambdaSample1*81)
+      IncidenceRow1[j,] <- exp(-lambdaSample1*ager[j])-exp(-lambdaSample1*80)
     }
   }
-  IncidenceDf1[i,] <- (IncidenceRow1)*100000
+  IncidenceDf1[i,] <- (IncidenceRow1)
 }
 for(i in 1:numSamples) {
   randomNumber  <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
@@ -434,7 +450,7 @@ for(i in 1:numSamples) {
       IncidenceRow3[j,] <- exp(-lambdaSample3*ager[j])-exp(-lambdaSample3*81)
     }
   }
-  IncidenceDf3[i,] <- (IncidenceRow3)*100000
+  IncidenceDf3[i,] <- (IncidenceRow3)
 }
 for(i in 1:numSamples) {
   randomNumber  <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
@@ -449,10 +465,10 @@ for(i in 1:numSamples) {
     if (j<80) {
       IncidenceRow3[j,] <- exp(-lambdaSample3*ager[j])-exp(-lambdaSample3*ager[j+1]) 
     } else {
-      IncidenceRow2[j,] <- exp(-lambdaSample3*ager[j])-exp(-lambdaSample3*81)
+      IncidenceRow3[j,] <- exp(-lambdaSample3*ager[j])-exp(-lambdaSample3*81)
     }
   }
-  IncidenceDf3[i,] <- (IncidenceRow3)*100000
+  IncidenceDf3[i,] <- (IncidenceRow3)
 }
 for(i in 1:numSamples) {
   randomNumber  <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
@@ -548,42 +564,42 @@ for(i in 1:numSamples) {
 
 # Dataframes for each study
 IncidenceDf1 <- as.data.frame(IncidenceDf1)
-colnames(IncidenceDf1) <- c(1:80)
+colnames(IncidenceDf1) <- c(1:79)
 IncLong1 <- stack(IncidenceDf1)
 colnames(IncLong1) <- c("incidence", "age")
 
 IncidenceDf2 <- as.data.frame(IncidenceDf2)
-colnames(IncidenceDf2) <- c(1:80)
+colnames(IncidenceDf2) <- c(1:79)
 IncLong2 <- stack(IncidenceDf2)
 colnames(IncLong2) <- c("incidence", "age")
 
 IncidenceDf3 <- as.data.frame(IncidenceDf3)
-colnames(IncidenceDf3) <- c(1:80)
+colnames(IncidenceDf3) <- c(1:79)
 IncLong3 <- stack(IncidenceDf3)
 colnames(IncLong3) <- c("incidence", "age")
 
 IncidenceDf4 <- as.data.frame(IncidenceDf4)
-colnames(IncidenceDf4) <- c(1:80)
+colnames(IncidenceDf4) <- c(1:79)
 IncLong4 <- stack(IncidenceDf4)
 colnames(IncLong4) <- c("incidence", "age")
 
 IncidenceDf5 <- as.data.frame(IncidenceDf5)
-colnames(IncidenceDf5) <- c(1:80)
+colnames(IncidenceDf5) <- c(1:79)
 IncLong5 <- stack(IncidenceDf5)
 colnames(IncLong5) <- c("incidence", "age")
 
 IncidenceDf6 <- as.data.frame(IncidenceDf6)
-colnames(IncidenceDf6) <- c(1:80)
+colnames(IncidenceDf6) <- c(1:79)
 IncLong6 <- stack(IncidenceDf6)
 colnames(IncLong6) <- c("incidence", "age")
 
 IncidenceDf7 <- as.data.frame(IncidenceDf7)
-colnames(IncidenceDf7) <- c(1:80)
+colnames(IncidenceDf7) <- c(1:79)
 IncLong7 <- stack(IncidenceDf7)
 colnames(IncLong7) <- c("incidence", "age")
 
 IncidenceDf8 <- as.data.frame(IncidenceDf8)
-colnames(IncidenceDf8) <- c(1:80)
+colnames(IncidenceDf8) <- c(1:79)
 IncLong8 <- stack(IncidenceDf8)
 colnames(IncLong8) <- c("incidence", "age")
 
@@ -599,6 +615,7 @@ WPP2022_POP_F01_1_POPULATION_SINGLE_AGE_BOTH_SEXES <- read_excel("~/Library/Clou
                                                                  sheet = "thai_2010")
 thaipop <-WPP2022_POP_F01_1_POPULATION_SINGLE_AGE_BOTH_SEXES
 thaipop <- thaipop*1000 
+
 
 for(i in 1:80) {
   ThaiSuspop2010 <- thaipop[1,i]*susprop3
@@ -660,7 +677,7 @@ ggplot(totlist, aes(x= year, y = Cases, fill = year)) +  # Change filling color
 # incidence boxplot (/100,000)
 ggplot(IncLong1, aes(x= age, y = incidence, fill = age)) +  # Change filling color
   geom_boxplot(show.legend = FALSE, outlier.shape = NA)+
-  theme_ipsum(plot_title_size = 10)+
+  theme_ipsum(plot_title_size = 10)+                                                   
   theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1, size = 7))+
   scale_fill_viridis(discrete=TRUE) +
   scale_color_viridis(discrete=TRUE) +
@@ -732,8 +749,104 @@ ggplot(LongCase3_2010, aes(x= ind, y = values, fill = ind)) +  # Change filling 
   scale_color_viridis(discrete=TRUE) +
   ggtitle("Number of CHIK cases in Thailand 2010")
 
+# cohort projection
+epidemic_FOI_Oli <- read_excel("C:/Users/Hyolim/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/epidemic_FOI_Oli.xlsx", 
+                               sheet = "2022cohort")
+View(epidemic_FOI_Oli)
+
+thai2022cohort <- epidemic_FOI_Oli*1000
+
+susprop2022 <- 1- outDf_3
+
+for(i in 1:80) {
+  ThaiSuspop2022 <- thai2022cohort[1,i]*susprop2022
+}
+
+burden2022cohort <- as.data.frame(ThaiSuspop2022*IncidenceDf3)
+burden2022cohort <- stack(burden2022cohort)
+burden2022cohort$values
+
+ggplot(burden2022cohort, aes(x= ind, y = values, fill = ind)) +  # Change filling color
+  geom_boxplot(show.legend = FALSE, outlier.shape = NA)+
+  theme_ipsum(plot_title_size = 10)+
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1, size = 7))+
+  scale_fill_viridis(discrete=TRUE) +
+  scale_color_viridis(discrete=TRUE) +
+  ggtitle("Burden of 2022 cohort")
+
+## 2030 calendar year
+# cohort projection
+epidemic_FOI_Oli <- read_excel("~/Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/1.Aim1/all_countries/epidemic_FOI_Oli.xlsx", 
+                               sheet = "2030cal")
+View(epidemic_FOI_Oli)
+thai2030cal <- epidemic_FOI_Oli*1000
+
+susprop2030 <- 1- outDf_3
+
+for(i in 1:80) {
+  ThaiSuspop2030 <- thai2030cal[1,i]*susprop2030
+}
+
+burden2030cal <- as.data.frame(ThaiSuspop2030*IncidenceDf3)
+burden2030cal <- stack(burden2030cal)
+
+veRandom <- runif(n=1000, min=0.8901, max=0.989)
+IncidenceVacc <- IncidenceDf3 %>% 
+  mutate(across(10:20, function(x) x*(1-veRandom*0.7)))
 
 
+burden2030vacc <- as.data.frame(ThaiSuspop2030*IncidenceVacc)
+burden2030vacc <- stack(burden2030vacc)
+
+ggplot(burden2030cal, aes(x= ind, y = values, fill = ind)) +  # Change filling color
+  geom_boxplot(show.legend = FALSE, outlier.shape = NA)+
+  theme_ipsum(plot_title_size = 10)+
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1, size = 7))+
+  scale_fill_viridis(discrete=TRUE) +
+  scale_color_viridis(discrete=TRUE) +
+  ggtitle("Burden of CY 2030 before vaccination (cases)")
+
+ggplot(burden2030vacc, aes(x= ind, y = values, fill = ind)) +  # Change filling color
+  geom_boxplot(show.legend = FALSE, outlier.shape = NA)+
+  theme_ipsum(plot_title_size = 10)+
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1, size = 7))+
+  scale_fill_viridis(discrete=TRUE) +
+  scale_color_viridis(discrete=TRUE) +
+  ggtitle("Burden of CY 2030 after vaccination (cases)")
+
+## 2040 calendar year
+epidemic_FOI_Oli <- read_excel("~/Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/1.Aim1/all_countries/epidemic_FOI_Oli.xlsx", 
+                               sheet = "2040cal")
+View(epidemic_FOI_Oli)
+thai2040cal <- epidemic_FOI_Oli*1000
+
+susprop2040 <- 1- outDf_3
+
+for(i in 1:80) {
+  ThaiSuspop2040 <- thai2040cal[1,i]*susprop2030
+}
+
+burden2040cal <- as.data.frame(ThaiSuspop2040*IncidenceDf3)
+burden2040cal <- stack(burden2040cal)
+
+veRandom <- runif(n=1000, min=0.8901, max=0.989)
+IncidenceVacc2040 <- IncidenceDf3 %>% 
+  mutate(across(10:30, function(x) x*(1-veRandom*0.7)))
+
+columns_to_multiply <- c(10:20)
+IncidenceDf3[, columns_to_multiply] <- lapply(IncidenceDf3[, columns_to_multiply], function(x) x * (1-veRandom*0.7))
+
+
+burden2040vacc <- as.data.frame(ThaiSuspop2040*IncidenceVacc2040)
+burden2040vacc <- stack(burden2040vacc)
+
+ggplot(burden2040vacc, aes(x= ind, y = values, fill = ind)) +  # Change filling color
+  geom_boxplot(show.legend = FALSE, outlier.shape = NA)+
+  theme_ipsum(plot_title_size = 10)+
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1, size = 7))+
+  scale_fill_viridis(discrete=TRUE) +
+  scale_color_viridis(discrete=TRUE) +
+  ggtitle("Burden of CY 2040 after vaccination (cases)")
 
 
 #################################################################
