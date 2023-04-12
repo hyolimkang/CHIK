@@ -19,12 +19,13 @@ library(data.table)
 #CountryModel <- read_excel("C:/Users/Hyolim/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/CountryModelCSV.xlsx", 
 #                           sheet = "inclusion")
 
-#CountryModel <- read_excel("D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/CountryModel.xlsx", 
-#                           sheet = "inclusion")
+CountryModel <- read_excel("D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/CountryModel.xlsx", 
+                           sheet = "inclusion")
 
-#CountryModel             <- "C:/Users/Hyolim/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/CountryModelInclusion.csv"
-CountryModel             <- "D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/CountryModelInclusion.csv"
-CountryModel             <- fread(CountryModel, header = "auto", stringsAsFactors = F)
+#CountryModel             <- read_excel("C:/Users/Hyolim/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/CountryModel.xlsx",
+#                                       sheet = "inclusion")
+#CountryModel             <- "D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/CountryModelInclusion.csv"
+#CountryModel             <- fread(CountryModel, header = "auto", stringsAsFactors = F)
 
 
 
@@ -112,7 +113,7 @@ summary(jpos)
 mcmcMatrix <- as.matrix(jpos)
 
 #age range
-ager=0:78
+ager=0:100
 numSamples = 1000
 
 # credible interval
@@ -391,11 +392,11 @@ mcmc %>%
 
 #### Incidence
 ## incidence by every age : exp(-lambda(a))-exp(-lambda(a+1))
-ager <- seq(0:78)
+ager <- 0:100
 
 for(i in 1:9) {
-  assign(paste0("IncidenceRow", i), matrix(NA, nrow=79, ncol = 1))
-  assign(paste0("IncidenceDf",  i), matrix(NA, nrow=numSamples, ncol = 79))
+  assign(paste0("IncidenceRow", i), matrix(NA, nrow=101, ncol = 1))
+  assign(paste0("IncidenceDf",  i), matrix(NA, nrow=numSamples, ncol = 101))
 }
 
 for(i in 1:numSamples) {
@@ -407,14 +408,16 @@ for(i in 1:numSamples) {
   
   lambdalist <- lapply(paste0("lambdaSample", c(1:9)), get)
   
-  for(j in seq_along(ager)) {
-    if (j<79) {
+  for(j in 0:101) {
+    if (j<101) {
       IncidenceRow1[j,] <- exp(-lambdaSample1*ager[j])-exp(-lambdaSample1*ager[j+1]) 
     } else {
-      IncidenceRow1[j,] <- exp(-lambdaSample1*ager[j])-exp(-lambdaSample1*80)
+      IncidenceRow1[j,] <- exp(-lambdaSample1*ager[j])-exp(-lambdaSample1*101)
     }
   }
   IncidenceDf1[i,] <- (IncidenceRow1)
+  colnames(IncidenceDf1) <- paste(0:100)
+  IncidenceDf1 <- as.data.frame(IncidenceDf1)
 }
 for(i in 1:numSamples) {
   randomNumber  <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))

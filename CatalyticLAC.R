@@ -15,6 +15,10 @@ library(plotly)
 #Read file
 CountryModel <- read_excel("~/Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/1.Aim1/all_countries/CountryModel.xlsx", 
                            sheet = "inclusion")
+CountryModel <- read_excel("D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/CountryModel.xlsx", 
+                           sheet = "inclusion")
+
+CountryModel <-read_excel("CountryModel.xlsx")
 View(CountryModel)
 #Rename data
 df_lac = CountryModel %>% filter(region == "LAC")
@@ -645,7 +649,7 @@ jdat = list(n.pos= df_lac$N.pos,
             age=df_lac$agemid)
 jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
 update(jmod, 500)
-jpos = coda.samples(jmod, paramVectorEpi2, n.iter=mcmc.length)
+jpos = coda.samples(jmod, paramVectorEpi3, n.iter=mcmc.length)
 
 summary(jpos) 
 mcmcMatrix <- as.matrix(jpos)
@@ -653,6 +657,8 @@ mcmcMatrix <- as.matrix(jpos)
 # Calculate DIC
 dic.samples(jmod, n.iter = mcmc.length)
 
+#samples
+numSamples = 1000
 
 # age range for epimodel 1 
 ager=1:80
