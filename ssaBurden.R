@@ -76,17 +76,6 @@ for (i in 11:20) {
   assign(paste0("burden_prevacc", i), as.data.frame(list[[i-10]]))
 }
 
-burden_prevacc11 <- as.data.frame(list[[1]])
-burden_prevacc12 <- as.data.frame(list[[2]])
-burden_prevacc13 <- as.data.frame(list[[3]])
-burden_prevacc14 <- as.data.frame(list[[4]])
-burden_prevacc15 <- as.data.frame(list[[5]])
-burden_prevacc16 <- as.data.frame(list[[6]])
-burden_prevacc17 <- as.data.frame(list[[7]])
-burden_prevacc18 <- as.data.frame(list[[8]])
-burden_prevacc19 <- as.data.frame(list[[9]])
-burden_prevacc20 <- as.data.frame(list[[10]])
-
 #-------------------------------------------------------------------------------
 # tot burden dataframe from 2011~2022
 
