@@ -30,7 +30,7 @@ rhumdf <- as.data.frame(rhum_raster, xy = T)
 # load country shapefile https://www.diva-gis.org/datadown
 gabon <- readOGR(dsn="D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/codes/CHIK/GAB_adm", 
                  layer="GAB_adm0")
-gabonsf <- spTransform(country, CRS(proj4string(clim_raster)))
+gabonsf <- spTransform(gabon, CRS(proj4string(clim_raster)))
 gabon_temp <- raster::extract(clim_raster, gabonsf) # extract country data by its shape grid cell 
 gabon_tempdf <- do.call(rbind, gabon_temp) - 273.15  # convert Kelvin scale to Celsius degree
 gabon_rh <- raster::extract(rhum_raster, gabonsf) # extract country data by its shape grid cell 
@@ -42,6 +42,24 @@ colnames(gabonData) <- c("date", "T", "H")
 gabonData[,1] <- as.character(seq(as.Date('2022-01-01'), as.Date('2022-12-31'), by = 'day'))
 gabonData[,2] <- colMeans(gabon_tempdf, na.rm = T)
 gabonData[,3] <- colMeans(gabon_rhdf, na.rm = T)
+
+# load country shapefile: SGP
+sgp <- readOGR(dsn="D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/codes/CHIK/SGP_adm", 
+                 layer="SGP_adm0")
+sgpsf <- spTransform(sgp, CRS(proj4string(clim_raster)))
+sgp_temp <- raster::extract(clim_raster, sgpsf) # extract country data by its shape grid cell 
+sgp_tempdf <- do.call(rbind, sgp_temp) - 273.15  # convert Kelvin scale to Celsius degree
+sgp_rh <- raster::extract(rhum_raster, sgpsf) # extract country data by its shape grid cell 
+sgp_rhdf <- do.call(rbind, sgp_rh) 
+
+# counstruct dataframes
+sgpData <- as.data.frame(matrix(NA, nrow = 365, ncol = 3))
+colnames(sgpData) <- c("date", "T", "H")
+sgpData[,1] <- as.character(seq(as.Date('2022-01-01'), as.Date('2022-12-31'), by = 'day'))
+sgpData[,2] <- colMeans(sgp_tempdf, na.rm = T)
+sgpData[,3] <- colMeans(sgp_rhdf, na.rm = T)
+
+
 
 ##---Step3: Index P prior setting-----------------------------------------------
 ##------------------------------------------------------------------------------
@@ -64,6 +82,19 @@ Gaballoutput <- do.call(rbind, Gaballoutput)
 GaballoutputVals <- Gaballoutput[,-1]
 Gabquantindex <- as.data.frame(apply(GaballoutputVals, 1, function(row) quantile(row, probs = 0.5)))
 
+sgp_mvse_model <- mvse_model(model_name="All", climate_data=sgpData, priors=priors)
+sgp_mvse_fit <- sampling(sgp_mvse_model, verbose=FALSE)
+sgpindexP <- mcmc_index_dist(sgp_mvse_fit, index="indexP")
+plot_priors(object=sgp_mvse_model)
+mcmc_traceplot(sgp_mvse_fit, options=list(max_iter=10^5))
+plot_climate(object=sgp_mvse_model)
+
+sgpalloutput <- MVSE::extract(sgp_mvse_fit, pars = "indexP")
+sgpalloutput <- do.call(rbind, sgpalloutput)
+sgpalloutputVals <- sgpalloutput[,-1]
+sgpquantindex <- as.data.frame(apply(sgpalloutputVals, 1, function(row) quantile(row, probs = 0.5)))
+
+
 ## 1. Raw indexP graph
 GabindexRaw <- as.data.frame(matrix(NA, nrow = 365, ncol = 3))
 colnames(GabindexRaw) <- c("id", "date", "IndexP")
@@ -79,6 +110,21 @@ ggplot(data = GabindexRaw, aes(x = date, y = IndexP))+
   theme_bw()+
   geom_smooth(method = "loess")+
   ggtitle("Daily IndexP in Gabon")
+
+sgpindexRaw <- as.data.frame(matrix(NA, nrow = 365, ncol = 3))
+colnames(sgpindexRaw) <- c("id", "date", "IndexP")
+sgpindexRaw[,1] <- paste0("indexP", seq(1,365))
+sgpindexRaw[,2] <- sgpalloutput[,1]
+sgpindexRaw[,3] <- sgpquantindex[,1]
+
+sgpindexRaw$date <- as.Date(paste0(sgpindexRaw$date, "-01"), format="%Y-%m-%d")
+ggplot(data = sgpindexRaw, aes(x = date, y = IndexP))+
+  scale_x_date(date_labels = "%Y.%m") + # %Y represents 4-digit year and $m represents the months as number (01-12), and its preceded by a dot. -> 2020.01 ~ 2020.12
+  geom_line()+
+  scale_y_continuous(breaks = seq(0, max(sgpindexRaw$IndexP, na.rm=TRUE), by = 1)) +
+  theme_bw()+
+  geom_smooth(method = "loess")+
+  ggtitle("Daily IndexP in SGP")
 
 ## 2. Cumulative indexP graph
 GabindexCum <- GabindexRaw
