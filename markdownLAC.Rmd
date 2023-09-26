@@ -1,0 +1,1925 @@
+---
+title: "markdownLAC"
+output: html_document
+date: "2023-07-06"
+---
+
+```{r setup, include=FALSE}
+library(readxl)
+require(tidyverse)
+require(rjags)
+library(binom)
+library(ggplot2)
+library(dplyr)
+library(varhandle)
+require(MCMCvis)
+library(cowplot)
+library(viridis)
+library(hrbrthemes)
+library(ggridges)
+library(plotly)
+library(maps)
+library(rgdal)
+library(rgeos)
+library(sf)
+library(ggpubr)
+library(tidyr)
+library(ggridges)
+library(gridExtra)
+library(loo)
+library(writexl)
+options(scipen = 999)
+```
+
+## R Markdown
+```{r setting, warning = FALSE}
+CountryModel <- read_excel("D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/CountryModel.xlsx", 
+    sheet = "inclusion", col_types = c("numeric", 
+        "text", "numeric", "numeric", "numeric", 
+        "numeric", "text", "text", "text", 
+        "text", "text", "text", "text", "text", 
+        "text", "text", "text"))
+#Rename data
+df_lac = CountryModel %>% filter(region == "LAC")
+
+df_lac[,c("midpoint","lower","upper")] = binom.confint(df_lac$N.pos, df_lac$N, method="exact")[,c("mean","lower","upper")]
+
+df_lac <-  df_lac %>% 
+  dplyr::mutate(agemid = (age_min+age_max)/2)
+
+df_lac <- df_lac[df_lac$antibody != "IgM",] # remove data that has only IgM
+
+study52        <-  df_lac %>% filter(study_no == 52)
+study124       <-  df_lac %>% filter(study_no == 124)
+study153       <-  df_lac %>% filter(study_no == 153)
+study165       <-  df_lac %>% filter(study_no == 165)
+study174       <-  df_lac %>% filter(study_no == 174)
+study179       <-  df_lac %>% filter(study_no == 179)
+study229       <-  df_lac %>% filter(study_no == 229)
+study243       <-  df_lac %>% filter(study_no == 243)
+study251       <-  df_lac %>% filter(study_no == 251)
+study260       <-  df_lac %>% filter(study_no == 260)
+study299       <-  df_lac %>% filter(study_no == 299)
+study345       <-  df_lac %>% filter(study_no == 345)
+study396       <-  df_lac %>% filter(study_no == 396)
+study406       <-  df_lac %>% filter(study_no == 406)
+study503_1     <-  df_lac %>% filter(study_no == 503 & country == "Martinique")
+study503_2     <-  df_lac %>% filter(study_no == 503 & country == "Guadalupe")
+study507       <-  df_lac %>% filter(study_no == 507)
+
+df_lac <- arrange(df_lac, study_no)
+
+
+lac_igg <- df_lac[df_lac$study_no %in% c(52,124,153,165,174,179,
+                                         229,243,251,260,299,345,396,406,503,507),]
+write_xlsx(lac_igg, "D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/codes/CHIK/lac_igg.xlsx")
+
+```
+
+```{r study 345}
+jcode <- "model{ 
+	for (i in 87:90){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = 1-exp(-lambda*age[i]) #catalytic model
+    log_lik[i] <- logdensity.bin(n.pos[i], seropos_est[i], N[i])
+	}
+		#  prior dists
+  lambda ~ dunif(0,1) #uninformative prior
+}"
+paramVector <- c("lambda", "log_lik")
+
+mcmc.length=50000
+jdat = list(n.pos= df_lac$N.pos,
+            N=df_lac$N,
+            age=df_lac$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix1 <- as.matrix(jpos)
+
+# calculating loo
+llik <- mcmcMatrix1[, 2:5] 
+r_eff <- effectiveSize(llik)
+loo_result1 <- loo(llik, r_eff = r_eff)
+print(loo_result1$diagnostics$pareto_k)
+plot(loo_result1,label_points = TRUE)
+waic <- waic(llik)
+waic
+# Plotting posterior distributions of all parameters
+mcmcDF <- as_tibble(mcmcMatrix1)
+mcmcDF %>%
+  gather() %>%
+  ggplot(aes(value)) +
+  facet_wrap(~ key, scales = "free") +
+  geom_density()
+```
+
+```{r study 52}
+jcode <- "model{ 
+	for (i in 1:4){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i] < (2018-delta),0,
+                            1-exp(-lambda))
+	}
+	#  prior dists
+  lambda ~ dunif(0,1)       #uninformative prior
+  delta  ~ dunif(2005,2018) #uninformative prior
+}"
+paramVector <- c("lambda", "delta")
+
+mcmc.length=50000
+jdat = list(n.pos= df_lac$N.pos,
+            N=df_lac$N,
+            age=df_lac$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+gelman.diag(jpos) # gelman-rubin diag
+gelman.plot(jpos)
+
+summary(jpos) 
+mcmcMatrix2 <- as.matrix(jpos)
+
+# calculating loo
+llik <- mcmcMatrix2[, 3:6] 
+r_eff <- effectiveSize(llik)
+loo_result2 <- loo(llik, r_eff = r_eff)
+print(loo_result2$diagnostics$pareto_k)
+plot(loo_result1,label_points = TRUE)
+waic <- waic(llik)
+waic
+# Plotting posterior distributions of all parameters
+mcmcDF <- as_tibble(mcmcMatrix1)
+mcmcDF %>%
+  gather() %>%
+  ggplot(aes(value)) +
+  facet_wrap(~ key, scales = "free") +
+  geom_density()
+
+```
+
+```{r study 165}
+jcode <- "model{ 
+	for (i in 41:44){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i] < (2018-delta),0,
+                            1-exp(-lambda))
+    # time-varying catalytic model
+    log_lik[i] <- logdensity.bin(n.pos[i], seropos_est[i], N[i])
+
+	}
+	#  prior dists
+  lambda ~ dunif(0,1)       #uninformative prior
+  delta  ~ dunif(2000,2018) #uninformative prior
+}"
+paramVector <- c("lambda", "delta", "log_lik")
+
+mcmc.length=50000
+jdat = list(n.pos= df_lac$N.pos,
+            N=df_lac$N,
+            age=df_lac$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix3 <- as.matrix(jpos)
+
+# calculating loo
+llik <- mcmcMatrix3[, 3:6] 
+r_eff <- effectiveSize(llik)
+loo_result3 <- loo(llik, r_eff = r_eff)
+print(loo_result3$diagnostics$pareto_k)
+plot(loo_result3,label_points = TRUE)
+waic <- waic(llik)
+waic
+# Plotting posterior distributions of all parameters
+mcmcDF <- as_tibble(mcmcMatrix3)
+mcmcDF %>%
+  gather() %>%
+  ggplot(aes(value)) +
+  facet_wrap(~ key, scales = "free") +
+  geom_density()
+dic.samples(jmod, n.iter = mcmc.length)
+```
+```{r study 179}
+jcode <- "model{ 
+	for (i in 56:61){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i] < (2015-delta),0,
+                            1-exp(-lambda))
+    # time-varying catalytic model
+    log_lik[i] <- logdensity.bin(n.pos[i], seropos_est[i], N[i])
+	}
+	#  prior dists
+  lambda ~ dunif(0,1)       #uninformative prior
+  delta  ~ dunif(1997,2015) #uninformative prior
+}"
+paramVector <- c("lambda", "delta", "log_lik")
+
+mcmc.length=50000
+jdat = list(n.pos= df_lac$N.pos,
+            N=df_lac$N,
+            age=df_lac$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix4 <- as.matrix(jpos)
+
+# calculating loo
+llik <- mcmcMatrix4[, 3:8] 
+r_eff <- effectiveSize(llik)
+loo_result4 <- loo(llik, r_eff = r_eff)
+print(loo_result4$diagnostics$pareto_k)
+plot(loo_result4,label_points = TRUE)
+waic <- waic(llik)
+waic
+# Plotting posterior distributions of all parameters
+mcmcDF <- as_tibble(mcmcMatrix4)
+mcmcDF %>%
+  gather() %>%
+  ggplot(aes(value)) +
+  facet_wrap(~ key, scales = "free") +
+  geom_density()
+dic.samples(jmod, n.iter = mcmc.length)
+
+```
+```{r study 229}
+jcode <- "model{ 
+	for (i in 62:65){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i] < (2015-delta),0,
+                            1-exp(-lambda))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda ~ dunif(0,1)       #uninformative prior
+  delta  ~ dunif(1997,2015) #uninformative prior
+}"
+paramVector <- c("lambda", "delta")
+
+mcmc.length=50000
+jdat = list(n.pos= df_lac$N.pos,
+            N=df_lac$N,
+            age=df_lac$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix5 <- as.matrix(jpos)
+
+```
+```{r study 243}
+jcode <- "model{ 
+	for (i in 66:68){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = 1 - exp(-lambda*age[i])
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda ~ dunif(0,1)       #uninformative prior
+}"
+paramVector <- c("lambda")
+
+mcmc.length=50000
+jdat = list(n.pos= df_lac$N.pos,
+            N=df_lac$N,
+            age=df_lac$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix6 <- as.matrix(jpos)
+
+```
+
+```{r study 299}
+jcode <- "model{ 
+	for (i in 84:86){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i] < (2015-delta),0,
+                            1-exp(-lambda))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda ~ dunif(0,1)       #uninformative prior
+  delta  ~ dunif(1997,2015) #uninformative prior
+}"
+paramVector <- c("lambda", "delta")
+
+mcmc.length=50000
+jdat = list(n.pos= df_lac$N.pos,
+            N=df_lac$N,
+            age=df_lac$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix7 <- as.matrix(jpos)
+
+```
+```{r study 396}
+jcode <- "model{ 
+	for (i in 91:93){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i] < (2017-delta),0,
+                            1-exp(-lambda))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda ~ dunif(0,1)       #uninformative prior
+  delta  ~ dunif(2004,2017) #uninformative prior
+}"
+paramVector <- c("lambda", "delta")
+
+mcmc.length=50000
+jdat = list(n.pos= df_lac$N.pos,
+            N=df_lac$N,
+            age=df_lac$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix8 <- as.matrix(jpos)
+
+```
+```{r study 406}
+jcode <- "model{ 
+	for (i in 94:98){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i] < (2016-delta),0,
+                            1-exp(-lambda))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda ~ dunif(0,1)       #uninformative prior
+  delta  ~ dunif(2003,2016) #uninformative prior
+}"
+paramVector <- c("lambda", "delta")
+
+mcmc.length=50000
+jdat = list(n.pos= df_lac$N.pos,
+            N=df_lac$N,
+            age=df_lac$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix9 <- as.matrix(jpos)
+
+```
+```{r study 251}
+jcode <- "model{ 
+	for (i in 69:73){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i]> (2019-delta2), 1-exp(-lambda1-lambda2)
+       ,ifelse(age[i]> (2019-delta1) && age[i] < 19, 1-exp(-lambda1),
+       0))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda1  ~ dunif(0,1)       #uninformative prior
+  lambda2  ~ dunif(0,1)       #uninformative prior
+  delta1   ~ dunif(2015,2019) #uninformative prior
+  delta2   ~ dunif(1996,1999)
+}"
+paramVector <- c("lambda1","lambda2", "delta1", "delta2")
+
+mcmc.length=50000
+jdat = list(n.pos= df_lac$N.pos,
+            N=df_lac$N,
+            age=df_lac$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix10 <- as.matrix(jpos)
+dic.samples(jmod, n.iter = mcmc.length)
+
+```
+```{r study 260}
+jcode <- "model{ 
+	for (i in 74:78){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i]> (2019-delta2), 1-exp(-lambda1-lambda2)
+       ,ifelse(age[i]> (2019-delta1) && age[i] < 10, 1-exp(-lambda1),
+       0))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda1  ~ dunif(0,1)       #uninformative prior
+  lambda2  ~ dunif(0,1)       #uninformative prior
+  delta1   ~ dunif(2010,2019) 
+  delta2   ~ dunif(2000,2008)
+}"
+paramVector <- c("lambda1","lambda2", "delta1", "delta2")
+
+mcmc.length=50000
+jdat = list(n.pos= df_lac$N.pos,
+            N=df_lac$N,
+            age=df_lac$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix11 <- as.matrix(jpos)
+
+```
+```{r study 124}
+jcode <- "model{ 
+	for (i in 17:20){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i]> (2019-delta3), 1-exp(-lambda1-lambda2-lambda3)
+       ,ifelse(age[i]> (2019-delta2) && age[i] < 30, 1-exp(-lambda1-lambda2)
+       ,ifelse(age[i]> (2019-delta1) && age[i] < 14, 1-exp(-lambda1),
+       0)))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda1  ~ dunif(0,1)       #uninformative prior
+  lambda2  ~ dunif(0,1)       #uninformative prior
+  lambda3  ~ dunif(0,1)       #uninformative prior
+  delta1  ~ dunif(2006,2019)
+  delta2  ~ dunif(1990,2004)
+  delta3  ~ dunif(1960,1988)
+}"
+paramVector <- c("lambda1","lambda2", "lambda3", "delta1", "delta2", "delta3")
+
+mcmc.length=50000
+jdat = list(n.pos= df_lac$N.pos,
+            N=df_lac$N,
+            age=df_lac$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix12 <- as.matrix(jpos)
+
+```
+```{r study 174}
+jcode <- "model{ 
+	for (i in 49:55){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i]> (2015-delta4), 1-exp(-lambda1-lambda2-lambda3-lambda4)
+       ,ifelse(age[i]> (2015-delta3) && age[i] < 14, 1-exp(-lambda1-lambda2-lambda3)
+       ,ifelse(age[i]> (2015-delta2) && age[i] < 9, 1-exp(-lambda1-lambda2)
+       ,ifelse(age[i]> (2015-delta1) && age[i] < 4, 1-exp(-lambda1),
+       0))))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda1  ~ dunif(0,1)       #uninformative prior
+  lambda2  ~ dunif(0,1)       #uninformative prior
+  lambda3  ~ dunif(0,1)       #uninformative prior
+  lambda4  ~ dunif(0,1)       #uninformative prior
+  delta1   ~ dunif(2012,2015) 
+  delta2   ~ dunif(2007,2010)
+  delta3   ~ dunif(2002,2005)
+  delta4   ~ dunif(1987,2000)
+}"
+paramVector <- c("lambda1","lambda2", "lambda3","lambda4", "delta1", "delta2", "delta3","delta4")
+
+mcmc.length=50000
+jdat = list(n.pos= df_lac$N.pos,
+            N=df_lac$N,
+            age=df_lac$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix13 <- as.matrix(jpos)
+
+```
+```{r study 153}
+
+
+jcode <- "model{ 
+	for (i in 99:103){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i] < (2014-delta),0,
+                            1-exp(-lambda))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda ~ dunif(0,1)       #uninformative prior
+  delta  ~ dunif(2011,2014) #uninformative prior
+}"
+paramVector <- c("lambda", "delta")
+
+mcmc.length=50000
+jdat = list(n.pos= df_lac$N.pos,
+            N=df_lac$N,
+            age=df_lac$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix14 <- as.matrix(jpos)
+
+```
+```{r study 503_1}
+jcode <- "model{ 
+	for (i in 99:103){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i] < (2014-delta),0,
+                            1-exp(-lambda))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda ~ dunif(0,1)       #uninformative prior
+  delta  ~ dunif(1985,2014) #uninformative prior
+}"
+paramVector <- c("lambda", "delta")
+
+mcmc.length=50000
+jdat = list(n.pos= df_lac$N.pos,
+            N=df_lac$N,
+            age=df_lac$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix15 <- as.matrix(jpos)
+dic.samples(jmod, n.iter = mcmc.length)
+
+```
+
+```{r study 507}
+jcode <- "model{ 
+	for (i in 104:106){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i] < (2019-delta),0,
+                            1-exp(-lambda))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda ~ dunif(0,1)       #uninformative prior
+  delta  ~ dunif(2001,2019) #uninformative prior
+}"
+paramVector <- c("lambda", "delta")
+
+mcmc.length=50000
+jdat = list(n.pos= df_lac$N.pos,
+            N=df_lac$N,
+            age=df_lac$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix16 <- as.matrix(jpos)
+dic.samples(jmod, n.iter = mcmc.length)
+
+```
+
+
+
+## Functions
+```{r Function}
+# credible interval
+constantCR <- function(paramVector, mcmcMatrix) {
+  
+  ager = 0:80
+  numSamples = 1000
+  
+  for(ii in 1:length(paramVector)) {
+  
+  outDf <- matrix(NA, nrow=numSamples, ncol=length(ager))
+  
+  for (kk in 1:numSamples ) {
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+    
+    lambdaSample <- mcmcMatrix[sample(nrow(mcmcMatrix), 1, replace=T), "lambda"]
+
+    newRow  <-  1-exp(-lambdaSample*ager)
+
+    outDf[kk,] <- newRow
+  }
+}
+  return(outDf)
+}
+
+Epi1CR <- function(paramVector, mcmcMatrix, ager1, ager2){
+  
+  numSamples = 1000
+  
+  for(ii in 1:length(paramVector)) {
+    
+    outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+    outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+    
+    
+    for (kk in 1:numSamples ) {
+      randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+      
+      lambdaSample <- mcmcMatrix[randomNumber,"lambda"]
+      deltaSample  <- mcmcMatrix[randomNumber,"delta"]
+      
+      newRow_1 <- 0
+      newRow_2 <- 1-exp(-lambdaSample)
+      
+      outDf_1[kk,] <- newRow_1
+      outDf_2[kk,] <- newRow_2
+      
+      outDf <- cbind(outDf_1,outDf_2)
+    }
+  }
+  return(outDf)
+}
+
+Epi2CR <- function(paramVector, mcmcMatrix, ager1, ager2, ager3){
+  numSamples = 1000
+  for(ii in 1:length(paramVector)) {
+    
+    outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+    outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+    outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(ager3))
+    
+    for (kk in 1:numSamples ) {
+      randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+      
+      lambdaSample1   <- mcmcMatrix[randomNumber,"lambda1"]
+      lambdaSample2   <- mcmcMatrix[randomNumber,"lambda2"]
+      deltaSample_1   <- mcmcMatrix[randomNumber,"delta1"]
+      deltaSample_2   <- mcmcMatrix[randomNumber,"delta2"]
+      
+      newRow_1 <- 0
+      newRow_2 <- 1-exp(-lambdaSample1)
+      newRow_3 <- 1-exp(-lambdaSample1-lambdaSample2)
+      
+      outDf_1[kk,] <- newRow_1
+      outDf_2[kk,] <- newRow_2
+      outDf_3[kk,] <- newRow_3
+      
+      outDf <- cbind(outDf_1,outDf_2,outDf_3)
+    }
+  }
+  return(outDf)
+}
+
+Epi3CR <- function(paramVector, mcmcMatrix, ager1, ager2, ager3, ager4){
+  numSamples = 1000
+  for(ii in 1:length(paramVector)) {
+    
+    outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+    outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+    outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(ager3))
+    outDf_4 <- matrix(NA,nrow=numSamples, ncol = length(ager4))
+    
+    for (kk in 1:numSamples ) {
+      randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+      
+      lambdaSample1    <- mcmcMatrix[randomNumber,"lambda1"]
+      lambdaSample2    <- mcmcMatrix[randomNumber,"lambda2"]
+      lambdaSample3    <- mcmcMatrix[randomNumber,"lambda3"]
+      
+      deltaSample_1   <- mcmcMatrix[randomNumber,"delta1"]
+      deltaSample_2   <- mcmcMatrix[randomNumber,"delta2"]
+      deltaSample_3   <- mcmcMatrix[randomNumber,"delta3"]
+      
+      newRow_1 <- 0
+      newRow_2 <- 1-exp(-lambdaSample1)
+      newRow_3 <- 1-exp(-lambdaSample1-lambdaSample2)
+      newRow_4 <- 1-exp(-lambdaSample1-lambdaSample2-lambdaSample3)
+      
+      outDf_1[kk,] <- newRow_1
+      outDf_2[kk,] <- newRow_2
+      outDf_3[kk,] <- newRow_3
+      outDf_4[kk,] <- newRow_4
+      
+      outDf <- cbind(outDf_1,outDf_2,outDf_3,outDf_4)
+    }
+  }
+  return(outDf)
+}
+
+Epi4CR <- function(paramVector, mcmcMatrix, ager1, ager2, ager3, ager4, ager5){
+  numSamples = 1000
+  for(ii in 1:length(paramVector)) {
+    
+    outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+    outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+    outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(ager3))
+    outDf_4 <- matrix(NA,nrow=numSamples, ncol = length(ager4))
+    outDf_5 <- matrix(NA,nrow=numSamples, ncol = length(ager5))
+    
+    for (kk in 1:numSamples ) {
+      randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+      
+      lambdaSample1    <- mcmcMatrix[randomNumber,"lambda1"]
+      lambdaSample2    <- mcmcMatrix[randomNumber,"lambda2"]
+      lambdaSample3    <- mcmcMatrix[randomNumber,"lambda3"]
+      lambdaSample4    <- mcmcMatrix[randomNumber,"lambda4"]
+      
+      deltaSample_1   <- mcmcMatrix[randomNumber,"delta1"]
+      deltaSample_2   <- mcmcMatrix[randomNumber,"delta2"]
+      deltaSample_3   <- mcmcMatrix[randomNumber,"delta3"]
+      deltaSample_4   <- mcmcMatrix[randomNumber,"delta4"]
+      
+      newRow_1 <- 0
+      newRow_2 <- 1-exp(-lambdaSample1)
+      newRow_3 <- 1-exp(-(lambdaSample1+lambdaSample2))
+      newRow_4 <- 1-exp(-(lambdaSample1+lambdaSample2+lambdaSample3))
+      newRow_5 <- 1-exp(-(lambdaSample1+lambdaSample2+lambdaSample3+lambdaSample4))
+      
+      outDf_1[kk,] <- newRow_1
+      outDf_2[kk,] <- newRow_2
+      outDf_3[kk,] <- newRow_3
+      outDf_4[kk,] <- newRow_4
+      outDf_5[kk,] <- newRow_5
+      
+      outDf <- cbind(outDf_1,outDf_2,outDf_3,outDf_4,outDf_5)
+    }
+  }
+  return(outDf)
+}
+
+Epi5Con <- function(paramVector, mcmcMatrix, ager1, ager2, ager3, ager4, ager5,ager6){
+  numSamples = 1000
+  for(ii in 1:length(paramVector)) {
+    
+    outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+    outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+    outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(ager3))
+    outDf_4 <- matrix(NA,nrow=numSamples, ncol = length(ager4))
+    outDf_5 <- matrix(NA,nrow=numSamples, ncol = length(ager5))
+    outDf_6 <- matrix(NA,nrow=numSamples, ncol = length(ager6))
+    
+    for (kk in 1:numSamples ) {
+      randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+      
+      lambdaSample1    <- mcmcMatrix[randomNumber,"lambda1"]
+      lambdaSample2    <- mcmcMatrix[randomNumber,"lambda2"]
+      lambdaSample3    <- mcmcMatrix[randomNumber,"lambda3"]
+      lambdaSample4    <- mcmcMatrix[randomNumber,"lambda4"]
+      lambdaSample5    <- mcmcMatrix[randomNumber,"lambda5"]
+      
+      deltaSample_1   <- mcmcMatrix[randomNumber,"delta1"]
+      deltaSample_2   <- mcmcMatrix[randomNumber,"delta2"]
+      deltaSample_3   <- mcmcMatrix[randomNumber,"delta3"]
+      deltaSample_4   <- mcmcMatrix[randomNumber,"delta4"]
+      deltaSample_5   <- mcmcMatrix[randomNumber,"delta5"]
+      
+      newRow_1 <- 0
+      newRow_2 <- 1-exp(-lambdaSample1)
+      newRow_3 <- 1-exp(-(lambdaSample1+lambdaSample2))
+      newRow_4 <- 1-exp(-(lambdaSample1+lambdaSample2+lambdaSample3))
+      newRow_5 <- 1-exp(-(lambdaSample1+lambdaSample2+lambdaSample3+lambdaSample4))
+      newRow_5 <- 1-exp(-(lambdaSample1+lambdaSample2+lambdaSample3+lambdaSample4))
+      newRow_6 <- 1-exp(-lambdaSample5*ager6)
+      
+      outDf_1[kk,] <- newRow_1
+      outDf_2[kk,] <- newRow_2
+      outDf_3[kk,] <- newRow_3
+      outDf_4[kk,] <- newRow_4
+      outDf_5[kk,] <- newRow_5
+      outDf_6[kk,] <- newRow_6
+      
+      outDf <- cbind(outDf_1,outDf_2,outDf_3,outDf_4,outDf_5,outDf_6)
+    }
+  }
+  return(outDf)
+  
+}
+
+# get quantile matrices function
+quantmat <- function(outDf){
+  ager = 0:80
+  quantileMatrix <- matrix(NA,nrow=ncol(outDf), ncol = 3)
+  for(jj in 1:ncol(outDf)){
+    quantiles <- outDf[,jj] %>% quantile(probs=c(.5,.025,.975))
+    quantileMatrix[jj,] <- quantiles
+  }
+  df_upperLower <- cbind(ager, quantileMatrix)
+  df_upperLower <- as.data.frame(df_upperLower)
+  colnames(df_upperLower) <- c('agemid', 'mean', 'upper', 'lower')
+  return(df_upperLower)
+}
+quantmat_haiti <- function(outDf){
+  ager = 0:100
+  quantileMatrix <- matrix(NA,nrow=ncol(outDf), ncol = 3)
+  for(jj in 1:ncol(outDf)){
+    quantiles <- outDf[,jj] %>% quantile(probs=c(.5,.025,.975))
+    quantileMatrix[jj,] <- quantiles
+  }
+  df_upperLower <- cbind(ager, quantileMatrix)
+  df_upperLower <- as.data.frame(df_upperLower)
+  colnames(df_upperLower) <- c('agemid', 'mean', 'upper', 'lower')
+  return(df_upperLower)
+}
+
+plotfuncXY <- function(df_upperLower, study){
+  g <- ggplot()+
+    geom_line(data = df_upperLower, aes(x=agemid, y=mean), color = "#558C8C")+
+    geom_ribbon(data = df_upperLower, alpha=0.2, aes(x=agemid, y=mean, ymin=lower, ymax=upper), fill = "#558C8C")+
+    geom_point(data = study, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+    geom_linerange(data = study, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+
+    theme_bw()+
+    theme(axis.line.x = element_blank(),
+          axis.title.x = element_blank())+
+    scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+    ylim(0, 1)+
+    xlab(element_blank()) + 
+    ylab(element_blank())+
+    scale_fill_viridis(discrete = T)+
+    facet_wrap(~ country, nrow = 1) 
+  return(g)
+}
+
+plotfuncNone <- function(df_upperLower, study){
+  g <- ggplot()+
+    geom_line(data = df_upperLower, aes(x=agemid, y=mean), color = "#558C8C")+
+    geom_ribbon(data = df_upperLower, alpha=0.2, aes(x=agemid, y=mean, ymin=lower, ymax=upper), fill = "#558C8C")+
+    geom_point(data = study, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+    geom_linerange(data = study, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+
+    theme_bw()+
+    theme(axis.line.x = element_blank(),
+          axis.text.x = element_blank(),
+          axis.title.x = element_blank(),
+          axis.text.y = element_blank())+
+    scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+    ylim(0, 1)+
+    xlab(element_blank()) + 
+    ylab(element_blank())+
+    scale_fill_viridis(discrete = T)+
+    facet_wrap(~ country, nrow = 1) 
+  return(g)
+}
+
+#ggplot function 1) y axis only 
+plotfuncYonly <- function(df_upperLower, study){
+  g <- ggplot()+
+    geom_line(data = df_upperLower, aes(x=agemid, y=mean), color = "#558C8C")+
+    geom_ribbon(data = df_upperLower, alpha=0.2, aes(x=agemid, y=mean, ymin=lower, ymax=upper), fill = "#558C8C")+
+    geom_point(data = study, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+    geom_linerange(data = study, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+
+    theme_bw()+
+    theme(axis.line.x = element_blank(),
+          axis.text.x = element_blank(),
+          axis.title.x = element_blank())+
+    scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+    ylim(0, 1)+
+    xlab(element_blank()) + 
+    ylab(element_blank())+
+    scale_fill_viridis(discrete = T)+
+    facet_wrap(~ country, nrow = 1) 
+  return(g)
+}
+#ggplot function 1) x axis only 
+plotfuncXonly <- function(df_upperLower, study){
+  study$annotation <- gsub(".*\\((.*)\\).*", "\\1", study$country)
+  g <- ggplot()+
+    geom_line(data = df_upperLower, aes(x=agemid, y=mean), color = "#558C8C")+
+    geom_ribbon(data = df_upperLower, alpha=0.2, aes(x=agemid, y=mean, ymin=lower, ymax=upper), fill = "#558C8C")+
+    geom_point(data = study, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+    geom_linerange(data = study, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+
+     # Add the annotation in the top right corner
+    geom_label(data = subset(study, !duplicated(annotation)), 
+               aes(label = annotation, x = max(df_upperLower$agemid), y = 1), 
+               hjust = "right", vjust = "top", 
+               fill = "white", box.color = "#558C8C", size = 3, inherit.aes = FALSE)+
+    theme_bw()+
+    theme(axis.line.x = element_blank(),
+          axis.title.x = element_blank(),
+          axis.text.y = element_blank())+
+    scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+    ylim(0, 1)+
+    xlab(element_blank()) + 
+    ylab(element_blank())+
+    scale_fill_viridis(discrete = T)+
+    facet_wrap(~ country, nrow = 1) 
+  return(g)
+}
+
+
+```
+
+## Result computation
+```{r results}
+##results computation
+outDf345 <- constantCR(paramVector, mcmcMatrix1)
+df_upperLower345 <- quantmat(outDf345)
+g1<- plot345 <- plotfuncYonly(df_upperLower345, study345)
+
+outDf52 <- Epi1CR(paramVector, mcmcMatrix2, ager1 = 0:3, ager2 = 4:80)
+df_upperLower52 <- quantmat(outDf52)
+g2<- plot52 <- plotfuncNone(df_upperLower52, study52)
+
+outDf165 <- Epi1CR(paramVector, mcmcMatrix3, ager1 = 0:5, ager2 = 6:80)
+df_upperLower165 <- quantmat(outDf165)
+g3<- plot165 <- plotfuncNone(df_upperLower165, study165)
+
+outDf179 <- Epi1CR(paramVector, mcmcMatrix4, ager1 = 0:8, ager2 = 9:80)
+df_upperLower179 <- quantmat(outDf179)
+g4<- plot179 <- plotfuncNone(df_upperLower179, study179)
+
+outDf229 <- Epi1CR(paramVector, mcmcMatrix5, ager1 = 0:4, ager2 = 5:80)
+df_upperLower229 <- quantmat(outDf229)
+g5<- plot229 <- plotfuncYonly(df_upperLower229, study229)
+
+outDf243 <- constantCR(paramVector, mcmcMatrix6)
+df_upperLower243 <- quantmat(outDf243)
+g6<- plot243 <- plotfuncNone(df_upperLower243, study243)
+
+outDf299 <- Epi1CR(paramVector, mcmcMatrix7, ager1 = 0:4, ager2 = 5:80)
+df_upperLower299 <- quantmat(outDf299)
+g7<- plot299 <- plotfuncXonly(df_upperLower299, study299)
+
+outDf396 <- Epi1CR(paramVector, mcmcMatrix8, ager1 = 0:4, ager2 = 5:80)
+df_upperLower396 <- quantmat(outDf396)
+g8<- plot396 <- plotfuncNone(df_upperLower396, study396)
+
+outDf406 <- Epi1CR(paramVector, mcmcMatrix9, ager1 = 0:3, ager2 = 4:80)
+df_upperLower406 <- quantmat(outDf406)
+g9<- plot406 <- plotfuncYonly(df_upperLower406, study406)
+
+outDf251 <- Epi2CR(paramVector, mcmcMatrix10, ager1 = 0:7, ager2 = 8:20, ager3 = 21:80)
+df_upperLower251 <- quantmat(outDf251)
+g10<- plot251 <- plotfuncYonly(df_upperLower251, study251)
+
+outDf260 <- Epi2CR(paramVector, mcmcMatrix11, ager1 = 0:2, ager2 = 3:13, ager3 = 14:80)
+df_upperLower260 <- quantmat(outDf260)
+g11<- plot260 <- plotfuncYonly(df_upperLower260, study260)
+
+outDf124 <- Epi3CR(paramVector, mcmcMatrix12, ager1 = 0:2, ager2 = 3:18, ager3 = 19:37, ager4 = 38:80)
+df_upperLower124 <- quantmat(outDf124)
+g12<- plot124 <- plotfuncNone(df_upperLower124, study124)
+
+outDf174 <- Epi4CR(paramVector, mcmcMatrix13, ager1 = 0:0, ager2 = 1:5, ager3 = 6:10, ager4 = 11:17, ager5 = 18:80)
+df_upperLower174 <- quantmat(outDf174)
+g13<- plot174 <- plotfuncNone(df_upperLower174, study174)
+
+outDf153 <- Epi1CR(paramVector, mcmcMatrix14, ager1 = 0:1, ager2 = 2:100)
+df_upperLower153 <- quantmat_haiti(outDf153)
+g14<- plot153 <- plotfuncNone(df_upperLower153, study153)
+
+outDf503 <- Epi1CR(paramVector, mcmcMatrix15, ager1 = 0:11, ager2 = 12:80)
+df_upperLower503 <- quantmat(outDf503)
+g15<- plot503 <- plotfuncXonly(df_upperLower503, study503_1)
+
+outDf507 <- Epi1CR(paramVector, mcmcMatrix16, ager1 = 0:6, ager2 = 7:80)
+df_upperLower507 <- quantmat(outDf507)
+g16<- plot507 <- plotfuncXY(df_upperLower507, study507)
+
+```
+
+## Including Plots
+
+```{r Seroprevalence plot, echo=FALSE}
+lac_graph<-  grid.arrange(g1, g2, g3, g5,
+                          g6, g8, g9, g12,
+                          g14, g10, g13, g4,
+                          g11, g7, g15, g16, ncol=3,
+                          left = "Proportion Seropositive",
+                          bottom = "Age (years)",
+                          top = "Seropositivity in LAC (non-fever population based studies)")
+ggsave("lacAll.pdf", lac_graph, dpi=1000, device= "pdf", height=8, width=10,units="in", bg=NULL)
+
+
+## for merge
+lac_sero<-  grid.arrange(g1, g2, g3, g5,
+                          g6, g8, g9, g12,
+                          g14, g10, g13, g4,
+                          g11, g7, g15, g16, ncol=3)
+ggsave("lac_sero.pdf", lac_sero, dpi=1000, device= "pdf", height=12, width=10,units="in", bg=NULL)
+
+# merge with SSA and LAC
+ssa_lac <- ggarrange(ssa_sero, lac_sero, 
+          labels = c("C", "D"),
+          ncol = 2)
+
+ggsave("ssa_lac.pdf", ssa_lac, dpi=1000, device= "pdf", height=11, width=17,units="in", bg=NULL)
+
+bottom_title <- textGrob("Age", 
+                         y = 0, 
+                         vjust = 2,
+                         gp = gpar(fontsize = 16))
+left_title <- textGrob("Seroprevalence (%)",
+                       x = 0,
+                       rot = 90,  # Rotate the text by 90 degrees
+                       vjust = 0.5,
+                       gp = gpar(fontsize = 16))
+
+combined_plot <- plot_grid(left_title, ssa_sero, lac_sero, 
+                           nrow = 1, 
+                           rel_widths = c(0.1, 1, 1, 1))
+
+
+filepath1 <- "~/Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/1.Aim1/codes/CHIK/ssa_lac.pdf"
+pdf(file = filepath1, width = 17, height = 8)
+
+plot_grid(ssa_sero, lac_sero, ncol = 2, rel_heights = c(1, 2), labels = c("C", "D"))
+
+dev.off()
+
+ssa_lac <- plot_grid(ssa_sero, lac_sero, ncol = 1, rel_heights = c(1, 2), labels = c("C", "D"))
+
+# sample graphs (for presentation)
+g1 <- plotfuncYonly(df_upperLower345, study345)
+g6 <- plotfuncNone(df_upperLower243, study243)
+g12 <- plotfuncXY(df_upperLower124, study124)
+g14 <- plotfuncXonly(df_upperLower153, study153)
+lac_vimc <- grid.arrange(g1,g6,g12,g14, ncol = 2,
+                         left = "Seroprevalence",
+                         bottom = "Age")
+ggsave("lac_vimc.pdf", lac_vimc, dpi=1000, device= "pdf", height=5, width=7,units="in", bg=NULL)
+
+```
+
+```{r FOI matrix}
+# study345
+mcmcMatrix1 <- as.data.frame(mcmcMatrix1)
+foimat1 <- as.data.frame(matrix(NA, nrow = 2, ncol = 4))
+colnames(foimat1) <- c("Year", "FOI", "lo", "hi")
+foimat1[,1] <- c(1946, 2016)
+foimat1[1:2,2] <- quantile(mcmcMatrix1$lambda, c(0.5))
+foimat1[1:2,3] <- quantile(mcmcMatrix1$lambda, c(0.025))
+foimat1[1:2,4] <- quantile(mcmcMatrix1$lambda, c(0.975))
+foimat1$country <- c("Brazil (São Francisco)")
+
+#study52
+mcmcMatrix2 <- as.data.frame(mcmcMatrix2)
+foimat2 <- as.data.frame(matrix(NA, nrow = 4, ncol = 4))
+colnames(foimat2) <- c("Year", "FOI", "lo", "hi")
+foimat2[,1] <- c(1938, 2014, 2014, 2018)
+foimat2[1:2,2] <- quantile(mcmcMatrix2$lambda, c(0.5))
+foimat2[1:2,3] <- quantile(mcmcMatrix2$lambda, c(0.025))
+foimat2[1:2,4] <- quantile(mcmcMatrix2$lambda, c(0.975))
+foimat2[3:4,2:4] <- 0
+foimat2$country <- c("Brazil (Rio de Janeiro)")
+
+#study165
+mcmcMatrix3 <- as.data.frame(mcmcMatrix3)
+foimat3 <- as.data.frame(matrix(NA, nrow = 4, ncol = 4))
+colnames(foimat3) <- c("Year", "FOI", "lo", "hi")
+foimat3[,1] <- c(1938, 2014, 2014, 2018)
+foimat3[1:2,2] <- quantile(mcmcMatrix3$lambda, c(0.5))
+foimat3[1:2,3] <- quantile(mcmcMatrix3$lambda, c(0.025))
+foimat3[1:2,4] <- quantile(mcmcMatrix3$lambda, c(0.975))
+foimat3[3:4,2:4] <- 0
+foimat3$country <- c("Brazil (Juazeiro do Norte)")
+
+#study229
+mcmcMatrix5 <- as.data.frame(mcmcMatrix5)
+foimat4 <- as.data.frame(matrix(NA, nrow = 4, ncol = 4))
+colnames(foimat4) <- c("Year", "FOI", "lo", "hi")
+foimat4[,1] <- c(1935, 2009, 2009, 2015)
+foimat4[1:2,2] <- quantile(mcmcMatrix5$lambda, c(0.5))
+foimat4[1:2,3] <- quantile(mcmcMatrix5$lambda, c(0.025))
+foimat4[1:2,4] <- quantile(mcmcMatrix5$lambda, c(0.975))
+foimat4[3:4,2:4] <- 0
+foimat4$country <- c("Brazil (Feira de Santana)")
+
+#study243
+mcmcMatrix6 <- as.data.frame(mcmcMatrix6)
+foimat5 <- as.data.frame(matrix(NA, nrow = 2, ncol = 4))
+colnames(foimat5) <- c("Year", "FOI", "lo", "hi")
+foimat5[,1] <- c(1971, 2016)
+foimat5[1:2,2] <- quantile(mcmcMatrix6$lambda, c(0.5))
+foimat5[1:2,3] <- quantile(mcmcMatrix6$lambda, c(0.025))
+foimat5[1:2,4] <- quantile(mcmcMatrix6$lambda, c(0.975))
+foimat5$country <- c("Brazil (Cruzeiro do Sul)")
+
+#study396
+mcmcMatrix8 <- as.data.frame(mcmcMatrix8)
+foimat6 <- as.data.frame(matrix(NA, nrow = 4, ncol = 4))
+colnames(foimat6) <- c("Year", "FOI", "lo", "hi")
+foimat6[,1] <- c(1937,2012,2012,2017)
+foimat6[1:2,2] <- quantile(mcmcMatrix8$lambda, c(0.5))
+foimat6[1:2,3] <- quantile(mcmcMatrix8$lambda, c(0.025))
+foimat6[1:2,4] <- quantile(mcmcMatrix8$lambda, c(0.975))
+foimat6[3:4,2:4] <- 0
+foimat6$country <- c("Brazil (Salvador)")
+
+#study406
+mcmcMatrix9 <- as.data.frame(mcmcMatrix9)
+foimat7 <- as.data.frame(matrix(NA, nrow = 4, ncol = 4))
+colnames(foimat7) <- c("Year", "FOI", "lo", "hi")
+foimat7[,1] <- c(1936,2012,2012,2016)
+foimat7[1:2,2] <- quantile(mcmcMatrix9$lambda, c(0.5))
+foimat7[1:2,3] <- quantile(mcmcMatrix9$lambda, c(0.025))
+foimat7[1:2,4] <- quantile(mcmcMatrix9$lambda, c(0.975))
+foimat7[3:4,2:4] <- 0
+foimat7$country <- c("Brazil (Riachão do Jacuipe)")
+
+#study124
+mcmcMatrix12 <- as.data.frame(mcmcMatrix12)
+foimat8 <- as.data.frame(matrix(NA, nrow = 8, ncol = 4))
+colnames(foimat8) <- c("Year", "FOI", "lo", "hi")
+foimat8[,1] <- c(1939,1980,1980, 2000,2000, 2015,2015,2019)
+foimat8[1:2,2] <- quantile(mcmcMatrix12$lambda3, c(0.5))
+foimat8[1:2,3] <- quantile(mcmcMatrix12$lambda3, c(0.025))
+foimat8[1:2,4] <- quantile(mcmcMatrix12$lambda3, c(0.975))
+
+foimat8[3:4,2] <- quantile(mcmcMatrix12$lambda2, c(0.5))
+foimat8[3:4,3] <- quantile(mcmcMatrix12$lambda2, c(0.025))
+foimat8[3:4,4] <- quantile(mcmcMatrix12$lambda2, c(0.975))
+
+foimat8[5:6,2] <- quantile(mcmcMatrix12$lambda1, c(0.5))
+foimat8[5:6,3] <- quantile(mcmcMatrix12$lambda1, c(0.025))
+foimat8[5:6,4] <- quantile(mcmcMatrix12$lambda1, c(0.975))
+foimat8[7:8,2:4] <- 0
+foimat8$country <- c("Brazil (Ceará)")
+
+#study153
+mcmcMatrix14 <- as.data.frame(mcmcMatrix14)
+foimat9 <- as.data.frame(matrix(NA, nrow = 4, ncol = 4))
+colnames(foimat9) <- c("Year", "FOI", "lo", "hi")
+foimat9[,1] <- c(1915, 2012,2012, 2014)
+foimat9[1:2,2] <- quantile(mcmcMatrix14$lambda, c(0.5))
+foimat9[1:2,3] <- quantile(mcmcMatrix14$lambda, c(0.025))
+foimat9[1:2,4] <- quantile(mcmcMatrix14$lambda, c(0.975))
+foimat9[3:4,2:4] <- 0
+foimat9$country <- c("Haiti")
+
+#study251
+mcmcMatrix10 <- as.data.frame(mcmcMatrix10)
+foimat10 <- as.data.frame(matrix(NA, nrow = 6, ncol = 4))
+colnames(foimat10) <- c("Year", "FOI", "lo", "hi")
+foimat10[,1] <- c(1976,1977,1977, 2010,2010,2019)
+foimat10[1:2,2] <- quantile(mcmcMatrix10$lambda2, c(0.5))
+foimat10[1:2,3] <- quantile(mcmcMatrix10$lambda2, c(0.025))
+foimat10[1:2,4] <- quantile(mcmcMatrix10$lambda2, c(0.975))
+
+foimat10[3:4,2] <- quantile(mcmcMatrix10$lambda1, c(0.5))
+foimat10[3:4,3] <- quantile(mcmcMatrix10$lambda1, c(0.025))
+foimat10[3:4,4] <- quantile(mcmcMatrix10$lambda1, c(0.975))
+foimat10[5:6,2:4] <- 0
+foimat10$country <- c("Mexico (Chiapas)")
+
+#study174
+mcmcMatrix13 <- as.data.frame(mcmcMatrix13)
+foimat11 <- as.data.frame(matrix(NA, nrow = 10, ncol = 4))
+colnames(foimat11) <- c("Year", "FOI", "lo", "hi")
+foimat11[,1] <- c(1935, 1996, 1996, 2004, 2004, 2008, 2008, 2013, 2013, 2015)
+foimat11[1:2,2] <- quantile(mcmcMatrix13$lambda4, c(0.5))
+foimat11[1:2,3] <- quantile(mcmcMatrix13$lambda4, c(0.025))
+foimat11[1:2,4] <- quantile(mcmcMatrix13$lambda4, c(0.975))
+
+foimat11[3:4,2] <- quantile(mcmcMatrix13$lambda3, c(0.5))
+foimat11[3:4,3] <- quantile(mcmcMatrix13$lambda3, c(0.025))
+foimat11[3:4,4] <- quantile(mcmcMatrix13$lambda3, c(0.975))
+
+foimat11[5:6,2] <- quantile(mcmcMatrix13$lambda2, c(0.5))
+foimat11[5:6,3] <- quantile(mcmcMatrix13$lambda2, c(0.025))
+foimat11[5:6,4] <- quantile(mcmcMatrix13$lambda2, c(0.975))
+
+foimat11[7:8,2] <- quantile(mcmcMatrix13$lambda1, c(0.5))
+foimat11[7:8,3] <- quantile(mcmcMatrix13$lambda1, c(0.025))
+foimat11[7:8,4] <- quantile(mcmcMatrix13$lambda1, c(0.975))
+foimat11[9:10, 2:4] <- 0
+foimat11$country <- c("Nicaragua (Managua)")
+
+#study179
+mcmcMatrix4 <- as.data.frame(mcmcMatrix4)
+foimat12 <- as.data.frame(matrix(NA, nrow = 4, ncol = 4))
+colnames(foimat12) <- c("Year", "FOI", "lo", "hi")
+foimat12[,1] <- c(1937,2006,2006,2015)
+foimat12[1:2,2] <- quantile(mcmcMatrix4$lambda, c(0.5))
+foimat12[1:2,3] <- quantile(mcmcMatrix4$lambda, c(0.025))
+foimat12[1:2,4] <- quantile(mcmcMatrix4$lambda, c(0.975))
+foimat12[3:4,2:4] <- 0
+foimat12$country <- c("Puerto Rico (national)")
+
+#study260
+mcmcMatrix11 <- as.data.frame(mcmcMatrix11)
+foimat13 <- as.data.frame(matrix(NA, nrow = 6, ncol = 4))
+colnames(foimat13) <- c("Year", "FOI", "lo", "hi")
+foimat13[,1] <- c(1969,2005,2005, 2016,2016,2019)
+foimat13[1:2,2] <- quantile(mcmcMatrix11$lambda2, c(0.5))
+foimat13[1:2,3] <- quantile(mcmcMatrix11$lambda2, c(0.025))
+foimat13[1:2,4] <- quantile(mcmcMatrix11$lambda2, c(0.975))
+
+foimat13[3:4,2] <- quantile(mcmcMatrix11$lambda1, c(0.5))
+foimat13[3:4,3] <- quantile(mcmcMatrix11$lambda1, c(0.025))
+foimat13[3:4,4] <- quantile(mcmcMatrix11$lambda1, c(0.975))
+foimat13[5:6,2:4] <- 0
+foimat13$country <- c("Puerto Rico (Ponce)")
+
+#study299
+mcmcMatrix7 <- as.data.frame(mcmcMatrix7)
+foimat14 <- as.data.frame(matrix(NA, nrow = 4, ncol = 4))
+colnames(foimat14) <- c("Year", "FOI", "lo", "hi")
+foimat14[,1] <- c(1956,2007,2007,2015)
+foimat14[1:2,2] <- quantile(mcmcMatrix7$lambda, c(0.5))
+foimat14[1:2,3] <- quantile(mcmcMatrix7$lambda, c(0.025))
+foimat14[1:2,4] <- quantile(mcmcMatrix7$lambda, c(0.975))
+foimat14[3:4,2:4] <- 0
+foimat14$country <- c("Virgin Island (U.S)")
+
+# study 503
+mcmcMatrix15 <- as.data.frame(mcmcMatrix15)
+foimat15 <- as.data.frame(matrix(NA, nrow = 4, ncol = 4))
+colnames(foimat15) <- c("Year", "FOI", "lo", "hi")
+foimat15[,1] <- c(1945,2002,2002,2015)
+foimat15[1:2,2] <- quantile(mcmcMatrix15$lambda, c(0.5))
+foimat15[1:2,3] <- quantile(mcmcMatrix15$lambda, c(0.025))
+foimat15[1:2,4] <- quantile(mcmcMatrix15$lambda, c(0.975))
+foimat15[3:4,2:4] <- 0
+foimat15$country <- c("Martinique")
+
+# study 507
+mcmcMatrix16 <- as.data.frame(mcmcMatrix16)
+foimat16 <- as.data.frame(matrix(NA, nrow = 4, ncol = 4))
+colnames(foimat16) <- c("Year", "FOI", "lo", "hi")
+foimat16[,1] <- c(1933,2013,2013,2019)
+foimat16[1:2,2] <- quantile(mcmcMatrix16$lambda, c(0.5))
+foimat16[1:2,3] <- quantile(mcmcMatrix16$lambda, c(0.025))
+foimat16[1:2,4] <- quantile(mcmcMatrix16$lambda, c(0.975))
+foimat16[3:4,2:4] <- 0
+foimat16$country <- c("Puerto Rico")
+
+# Create an empty list to store all objects
+all_objects <- list()
+
+# Loop over the names of your objects
+for (i in 1:16) {
+  # Generate the name of the object
+  name <- paste("foimat", i, sep = "")
+  
+  # Get the object by its name and store it in the list
+  all_objects[[i]] <- get(name)
+}
+
+# Now, all_objects is a list of your objects
+
+foimatLAC <- do.call(rbind, all_objects)
+write.csv(foimatLAC, file = "foimatLAC_1.csv", row.names = FALSE)
+
+
+```
+
+```{r FOI value extract}
+foiextract_con <- function(mcmcMatrix){
+  lambda_mid <- quantile(mcmcMatrix$lambda, 0.5)
+  lambda_lo  <- quantile(mcmcMatrix$lambda, 0.025)
+  lambda_hi  <- quantile(mcmcMatrix$lambda, 0.975)   
+  result <- list(
+    median      = lambda_mid,
+    lower_bound = lambda_lo,
+    upper_bound = lambda_hi
+  )
+  return(result)
+}
+
+foiextract_epi1 <- function(mcmcMatrix){
+  lambda_mid <- quantile(mcmcMatrix[,"lambda"], c(0.5))
+  lambda_lo  <- quantile(mcmcMatrix[,"lambda"], c(0.025))
+  lambda_hi  <- quantile(mcmcMatrix[,"lambda"], c(0.975))
+  
+  delta_mid <- quantile(mcmcMatrix[,"delta"], c(0.5))
+  delta_lo  <- quantile(mcmcMatrix[,"delta"], c(0.025))
+  delta_hi  <- quantile(mcmcMatrix[,"delta"], c(0.975))
+  
+lambda_result <- list(
+    median      = lambda_mid,
+    lower_bound = lambda_lo,
+    upper_bound = lambda_hi
+  )
+  
+  delta_result <- list(
+    median      = delta_mid,
+    lower_bound = delta_lo,
+    upper_bound = delta_hi
+  )
+  
+  result <- list(
+    lambda = lambda_result,
+    delta = delta_result
+  )  
+  return(result)
+}
+
+foiextract_epi2 <- function(mcmcMatrix){
+  lambda1_mid <- quantile(mcmcMatrix[,"lambda1"], c(0.5))
+  lambda1_lo  <- quantile(mcmcMatrix[,"lambda1"], c(0.025))
+  lambda1_hi  <- quantile(mcmcMatrix[,"lambda1"], c(0.975))
+  lambda2_mid <- quantile(mcmcMatrix[,"lambda2"], c(0.5))
+  lambda2_lo  <- quantile(mcmcMatrix[,"lambda2"], c(0.025))
+  lambda2_hi  <- quantile(mcmcMatrix[,"lambda2"], c(0.975))
+  
+  delta1_mid <- quantile(mcmcMatrix[,"delta1"], c(0.5))
+  delta1_lo  <- quantile(mcmcMatrix[,"delta1"], c(0.025))
+  delta1_hi  <- quantile(mcmcMatrix[,"delta1"], c(0.975))
+  delta2_mid <- quantile(mcmcMatrix[,"delta2"], c(0.5))
+  delta2_lo  <- quantile(mcmcMatrix[,"delta2"], c(0.025))
+  delta2_hi  <- quantile(mcmcMatrix[,"delta2"], c(0.975))
+  
+  lambda1_result <- list(
+    median      = lambda1_mid,
+    lower_bound = lambda1_lo,
+    upper_bound = lambda1_hi
+  )
+  lambda2_result <- list(
+    median      = lambda2_mid,
+    lower_bound = lambda2_lo,
+    upper_bound = lambda2_hi
+  )
+
+    delta1_result <- list(
+    median      = delta1_mid,
+    lower_bound = delta1_lo,
+    upper_bound = delta1_hi
+  )
+  
+  
+  delta2_result <- list(
+    median      = delta2_mid,
+    lower_bound = delta2_lo,
+    upper_bound = delta2_hi
+  )
+  
+  result <- list(
+    lambda1 = lambda1_result,
+    lambda2 = lambda2_result,
+    delta1  = delta1_result,
+    delta2  = delta2_result
+  )  
+  return(result)
+}
+
+foiextract_epi3 <- function(mcmcMatrix){
+  lambda1_mid <- quantile(mcmcMatrix[,"lambda1"], c(0.5))
+  lambda1_lo  <- quantile(mcmcMatrix[,"lambda1"], c(0.025))
+  lambda1_hi  <- quantile(mcmcMatrix[,"lambda1"], c(0.975))
+  lambda2_mid <- quantile(mcmcMatrix[,"lambda2"], c(0.5))
+  lambda2_lo  <- quantile(mcmcMatrix[,"lambda2"], c(0.025))
+  lambda2_hi  <- quantile(mcmcMatrix[,"lambda2"], c(0.975))
+  lambda3_mid <- quantile(mcmcMatrix[,"lambda3"], c(0.5))
+  lambda3_lo  <- quantile(mcmcMatrix[,"lambda3"], c(0.025))
+  lambda3_hi  <- quantile(mcmcMatrix[,"lambda3"], c(0.975))
+    
+  delta1_mid <- quantile(mcmcMatrix[,"delta1"], c(0.5))
+  delta1_lo  <- quantile(mcmcMatrix[,"delta1"], c(0.025))
+  delta1_hi  <- quantile(mcmcMatrix[,"delta1"], c(0.975))
+  delta2_mid <- quantile(mcmcMatrix[,"delta2"], c(0.5))
+  delta2_lo  <- quantile(mcmcMatrix[,"delta2"], c(0.025))
+  delta2_hi  <- quantile(mcmcMatrix[,"delta2"], c(0.975))
+  delta3_mid <- quantile(mcmcMatrix[,"delta3"], c(0.5))
+  delta3_lo  <- quantile(mcmcMatrix[,"delta3"], c(0.025))
+  delta3_hi  <- quantile(mcmcMatrix[,"delta3"], c(0.975))
+  
+  lambda1_result <- list(
+    median      = lambda1_mid,
+    lower_bound = lambda1_lo,
+    upper_bound = lambda1_hi
+  )
+  
+  lambda2_result <- list(
+    median      = lambda2_mid,
+    lower_bound = lambda2_lo,
+    upper_bound = lambda2_hi
+  )
+
+  lambda3_result <- list(
+    median      = lambda3_mid,
+    lower_bound = lambda3_lo,
+    upper_bound = lambda3_hi
+  )
+  
+  delta1_result <- list(
+    median      = delta1_mid,
+    lower_bound = delta1_lo,
+    upper_bound = delta1_hi
+  )
+  
+  
+  delta2_result <- list(
+    median      = delta2_mid,
+    lower_bound = delta2_lo,
+    upper_bound = delta2_hi
+  )
+ 
+  delta3_result <- list(
+    median      = delta3_mid,
+    lower_bound = delta3_lo,
+    upper_bound = delta3_hi
+  )
+   
+  result <- list(
+    lambda1 = lambda1_result,
+    lambda2 = lambda2_result,
+    lambda3 = lambda3_result,
+    delta1  = delta1_result,
+    delta2  = delta2_result,
+    delta3  = delta3_result
+  )  
+  return(result)
+}
+
+foiextract_epi4 <- function(mcmcMatrix){
+  lambda1_mid <- quantile(mcmcMatrix[,"lambda1"], c(0.5))
+  lambda1_lo  <- quantile(mcmcMatrix[,"lambda1"], c(0.025))
+  lambda1_hi  <- quantile(mcmcMatrix[,"lambda1"], c(0.975))
+  lambda2_mid <- quantile(mcmcMatrix[,"lambda2"], c(0.5))
+  lambda2_lo  <- quantile(mcmcMatrix[,"lambda2"], c(0.025))
+  lambda2_hi  <- quantile(mcmcMatrix[,"lambda2"], c(0.975))
+  lambda3_mid <- quantile(mcmcMatrix[,"lambda3"], c(0.5))
+  lambda3_lo  <- quantile(mcmcMatrix[,"lambda3"], c(0.025))
+  lambda3_hi  <- quantile(mcmcMatrix[,"lambda3"], c(0.975))
+  lambda4_mid <- quantile(mcmcMatrix[,"lambda4"], c(0.5))
+  lambda4_lo  <- quantile(mcmcMatrix[,"lambda4"], c(0.025))
+  lambda4_hi  <- quantile(mcmcMatrix[,"lambda4"], c(0.975))
+      
+  delta1_mid <- quantile(mcmcMatrix[,"delta1"], c(0.5))
+  delta1_lo  <- quantile(mcmcMatrix[,"delta1"], c(0.025))
+  delta1_hi  <- quantile(mcmcMatrix[,"delta1"], c(0.975))
+  delta2_mid <- quantile(mcmcMatrix[,"delta2"], c(0.5))
+  delta2_lo  <- quantile(mcmcMatrix[,"delta2"], c(0.025))
+  delta2_hi  <- quantile(mcmcMatrix[,"delta2"], c(0.975))
+  delta3_mid <- quantile(mcmcMatrix[,"delta3"], c(0.5))
+  delta3_lo  <- quantile(mcmcMatrix[,"delta3"], c(0.025))
+  delta3_hi  <- quantile(mcmcMatrix[,"delta3"], c(0.975))
+  delta4_mid <- quantile(mcmcMatrix[,"delta4"], c(0.5))
+  delta4_lo  <- quantile(mcmcMatrix[,"delta4"], c(0.025))
+  delta4_hi  <- quantile(mcmcMatrix[,"delta4"], c(0.975))
+  
+  lambda1_result <- list(
+    median      = lambda1_mid,
+    lower_bound = lambda1_lo,
+    upper_bound = lambda1_hi
+  )
+  
+  lambda2_result <- list(
+    median      = lambda2_mid,
+    lower_bound = lambda2_lo,
+    upper_bound = lambda2_hi
+  )
+
+  lambda3_result <- list(
+    median      = lambda3_mid,
+    lower_bound = lambda3_lo,
+    upper_bound = lambda3_hi
+  )
+
+  lambda4_result <- list(
+    median      = lambda4_mid,
+    lower_bound = lambda4_lo,
+    upper_bound = lambda4_hi
+  )
+
+    
+  delta1_result <- list(
+    median      = delta1_mid,
+    lower_bound = delta1_lo,
+    upper_bound = delta1_hi
+  )
+  
+  
+  delta2_result <- list(
+    median      = delta2_mid,
+    lower_bound = delta2_lo,
+    upper_bound = delta2_hi
+  )
+ 
+  delta3_result <- list(
+    median      = delta3_mid,
+    lower_bound = delta3_lo,
+    upper_bound = delta3_hi
+  )
+
+  delta4_result <- list(
+    median      = delta4_mid,
+    lower_bound = delta4_lo,
+    upper_bound = delta4_hi
+  )
+     
+  result <- list(
+    lambda1 = lambda1_result,
+    lambda2 = lambda2_result,
+    lambda3 = lambda3_result,
+    lambda4 = lambda4_result,
+    delta1  = delta1_result,
+    delta2  = delta2_result,
+    delta3  = delta3_result,
+    delta4  = delta4_result
+  )  
+  return(result)
+}
+
+plot_foi_con <- function(extract, start_year, end_year, country) {
+  
+  # Extract values from the input
+  lambda1 <- c(extract$median)
+  end_year <- end_year
+  # Define years
+  years <- start_year:end_year
+  
+  # Create the foi_values, lower_bound_values, and upper_bound_values vectors
+  foi_values <- rep(0, length(years))
+  lower_bound_values1 <- rep(0, length(years))
+  upper_bound_values1 <- rep(0, length(years))
+
+ # Adjusting for delta1 and lambda1
+  foi_values[which(years == end_year)] <- lambda1
+  lower_bound_values1[which(years == end_year)] <- extract$lower_bound
+  upper_bound_values1[which(years == end_year)] <- extract$upper_bound
+  
+
+  data <- data.frame(years, foi_values, 
+                     lower_bound_values = pmin(lower_bound_values1), 
+                     upper_bound_values = pmax(upper_bound_values1),
+                     country = rep(country, length(years)))
+  
+  ggplot(data, aes(x = years, y = foi_values)) + 
+    geom_ribbon(aes(ymin = lower_bound_values, ymax = upper_bound_values), fill = "#C05746", alpha = 0.5) +
+    geom_point(aes(y = foi_values), color = "#C05746", size = 0.5) +  # Using points to clearly indicate FOI in specific years
+    theme_bw()+
+    facet_wrap(~country)+
+    ylab(element_blank())+
+    xlab(element_blank())+
+    scale_x_continuous(limits = c(1930, 2020), breaks = seq(1930, 2020, by = 20))
+}
+
+
+plot_foi_epi1 <- function(extract, start_year, end_year, country) {
+  
+  # Extract values from the input
+  lambda1 <- c(extract$lambda$median)
+  delta1  <- c(round(extract$delta$median))
+
+  # Define years
+  years <- start_year:end_year
+  
+  # Create the foi_values, lower_bound_values, and upper_bound_values vectors
+  foi_values <- rep(0, length(years))
+  lower_bound_values1 <- rep(0, length(years))
+  upper_bound_values1 <- rep(0, length(years))
+
+ # Adjusting for delta1 and lambda1
+  foi_values[which(years == delta1)] <- lambda1
+  lower_bound_values1[which(years == delta1)] <- extract$lambda$lower_bound
+  upper_bound_values1[which(years == delta1)] <- extract$lambda$upper_bound
+  
+
+  data <- data.frame(years, foi_values, 
+                     lower_bound_values = pmin(lower_bound_values1), 
+                     upper_bound_values = pmax(upper_bound_values1),
+                     country = rep(country, length(years)))
+  
+  ggplot(data, aes(x = years, y = foi_values)) + 
+    geom_ribbon(aes(ymin = lower_bound_values, ymax = upper_bound_values), fill = "#C05746", alpha = 0.5) +
+    geom_point(aes(y = foi_values), color = "#C05746", size = 0.5) +  # Using points to clearly indicate FOI in specific years
+    theme_bw()+
+    facet_wrap(~country)+
+    ylab(element_blank())+
+    xlab(element_blank())+
+    scale_x_continuous(limits = c(1930, 2020), breaks = seq(1930, 2020, by = 20))
+}
+
+plot_foi_epi2 <- function(extract, start_year, end_year, country) {
+  
+  # Extract values from the input
+  lambda1 <- c(extract$lambda1$median)
+  lambda2 <- c(extract$lambda2$median)
+  delta1  <- c(round(extract$delta1$median))
+  delta2  <- c(round(extract$delta2$median))
+  
+  # Define years
+  years <- start_year:end_year
+  
+  # Create the foi_values, lower_bound_values, and upper_bound_values vectors
+  foi_values <- rep(0, length(years))
+  lower_bound_values1 <- rep(0, length(years))
+  upper_bound_values1 <- rep(0, length(years))
+  lower_bound_values2 <- rep(0, length(years))
+  upper_bound_values2 <- rep(0, length(years))
+  
+ # Adjusting for delta1 and lambda1
+  foi_values[which(years == delta1)] <- lambda1
+  lower_bound_values1[which(years == delta1)] <- extract$lambda1$lower_bound
+  upper_bound_values1[which(years == delta1)] <- extract$lambda1$upper_bound
+  
+  # Adjusting for delta2 and lambda2
+  foi_values[which(years == delta2)] <- lambda2
+  lower_bound_values2[which(years == delta2)] <- extract$lambda2$lower_bound
+  upper_bound_values2[which(years == delta2)] <- extract$lambda2$upper_bound  
+
+  data <- data.frame(years, foi_values, 
+                     lower_bound_values = pmin(lower_bound_values1, lower_bound_values2), 
+                     upper_bound_values = pmax(upper_bound_values1, upper_bound_values2),
+                     country = rep(country, length(years)))
+  
+  ggplot(data, aes(x = years, y = foi_values)) + 
+    geom_ribbon(aes(ymin = lower_bound_values, ymax = upper_bound_values), fill = "#C05746", alpha = 0.5) +
+    geom_point(aes(y = foi_values), color = "#C05746", size = 0.5) +  # Using points to clearly indicate FOI in specific years
+    theme_bw()+
+    facet_wrap(~country)+
+    ylab(element_blank())+
+    xlab(element_blank())+
+    scale_x_continuous(limits = c(1930, 2020), breaks = seq(1930, 2020, by = 20))
+}
+
+plot_foi_epi3 <- function(extract, start_year, end_year, country) {
+  
+  # Extract values from the input
+  lambda1 <- extract$lambda1$median[[1]]
+  lambda2 <- extract$lambda2$median[[1]]
+  lambda3 <- extract$lambda3$median[[1]]
+  delta1  <- round(extract$delta1$median[[1]])
+  delta2  <- round(extract$delta2$median[[1]])
+  delta3  <- round(extract$delta3$median[[1]])  
+  
+  # Define years
+  years <- start_year:end_year
+  
+  # Create the foi_values, lower_bound_values, and upper_bound_values vectors
+  foi_values <- rep(0, length(years))
+  lower_bound_values <- rep(0, length(years))
+  upper_bound_values <- rep(0, length(years))  
+
+  # Adjust values based on the deltas and lambdas
+  foi_values[which(years == delta1)] <- lambda1
+  foi_values[which(years == delta2)] <- lambda2
+  foi_values[which(years == delta3)] <- lambda3
+  
+  lower_bound_values[which(years == delta1)] <- extract$lambda1$lower_bound[[1]]
+  lower_bound_values[which(years == delta2)] <- extract$lambda2$lower_bound[[1]]
+  lower_bound_values[which(years == delta3)] <- extract$lambda3$lower_bound[[1]]
+  
+  upper_bound_values[which(years == delta1)] <- extract$lambda1$upper_bound[[1]]
+  upper_bound_values[which(years == delta2)] <- extract$lambda2$upper_bound[[1]]
+  upper_bound_values[which(years == delta3)] <- extract$lambda3$upper_bound[[1]]
+  
+  data <- data.frame(
+    years, foi_values,
+    lower_bound_values = lower_bound_values,
+    upper_bound_values = upper_bound_values,
+    country = rep(country, length(years))
+  ) 
+  ggplot(data, aes(x = years, y = foi_values)) + 
+    geom_ribbon(aes(ymin = lower_bound_values, ymax = upper_bound_values), fill = "#C05746", alpha = 0.5) +
+    geom_point(aes(y = foi_values), color = "#C05746", size = 0.5) +  # Using points to clearly indicate FOI in specific years
+    theme_bw()+
+    facet_wrap(~country)+
+    ylab(element_blank())+
+    xlab(element_blank())+
+    scale_x_continuous(limits = c(1930, 2020), breaks = seq(1930, 2020, by = 20))
+}
+
+plot_foi_epi4 <- function(extract, start_year, end_year, country) {
+  
+  # Extract values from the input
+  lambda1 <- extract$lambda1$median[[1]]
+  lambda2 <- extract$lambda2$median[[1]]
+  lambda3 <- extract$lambda3$median[[1]]
+  lambda4 <- extract$lambda4$median[[1]]
+  delta1  <- round(extract$delta1$median[[1]])
+  delta2  <- round(extract$delta2$median[[1]])
+  delta3  <- round(extract$delta3$median[[1]])  
+  delta4  <- round(extract$delta4$median[[1]]) 
+  
+  # Define years
+  years <- start_year:end_year
+  
+  # Create the foi_values, lower_bound_values, and upper_bound_values vectors
+  foi_values <- rep(0, length(years))
+  lower_bound_values <- rep(0, length(years))
+  upper_bound_values <- rep(0, length(years))  
+
+  # Adjust values based on the deltas and lambdas
+  foi_values[which(years == delta1)] <- lambda1
+  foi_values[which(years == delta2)] <- lambda2
+  foi_values[which(years == delta3)] <- lambda3
+  foi_values[which(years == delta4)] <- lambda4
+  
+  lower_bound_values[which(years == delta1)] <- extract$lambda1$lower_bound[[1]]
+  lower_bound_values[which(years == delta2)] <- extract$lambda2$lower_bound[[1]]
+  lower_bound_values[which(years == delta3)] <- extract$lambda3$lower_bound[[1]]
+  lower_bound_values[which(years == delta4)] <- extract$lambda4$lower_bound[[1]]
+    
+  upper_bound_values[which(years == delta1)] <- extract$lambda1$upper_bound[[1]]
+  upper_bound_values[which(years == delta2)] <- extract$lambda2$upper_bound[[1]]
+  upper_bound_values[which(years == delta3)] <- extract$lambda3$upper_bound[[1]]
+  upper_bound_values[which(years == delta4)] <- extract$lambda4$upper_bound[[1]]
+  
+  data <- data.frame(
+    years, foi_values,
+    lower_bound_values = lower_bound_values,
+    upper_bound_values = upper_bound_values,
+    country = rep(country, length(years))
+  ) 
+  ggplot(data, aes(x = years, y = foi_values)) + 
+    geom_ribbon(aes(ymin = lower_bound_values, ymax = upper_bound_values), fill = "#C05746", alpha = 0.5) +
+    geom_point(aes(y = foi_values), color = "#C05746", size = 0.5) +  # Using points to clearly indicate FOI in specific years
+    theme_bw()+
+    facet_wrap(~country)+
+    ylab(element_blank())+
+    xlab(element_blank())+
+    scale_x_continuous(limits = c(1930, 2020), breaks = seq(1930, 2020, by = 20))
+}
+
+```
+
+
+
+```{r FOI func}
+# second version FoI graph
+plotFOIXY <- function(foimatrix){
+  g <- ggplot(foimatrix, aes(x = Year, ymin = lo, ymax = hi, y = FOI))+
+    geom_ribbon(alpha= 0.2, fill = "#C05746")+
+    geom_line(color = "#C05746")+
+    theme_bw()+
+    theme(axis.text.y = element_text(angle = 45, hjust = 1, size = 8)) +
+    ylab(element_blank())+
+    scale_y_continuous(limits = c(0.0, 1), breaks = seq(0.0, 1.0, by = 0.1))+
+    xlab(element_blank())+
+    facet_wrap(~ country, nrow = 1) 
+  return(g)
+}
+
+plotFOIXOnly <- function(foimatrix){
+  g <- ggplot(foimatrix, aes(x = Year, ymin = lo, ymax = hi, y = FOI))+
+    geom_ribbon(alpha= 0.2, fill = "#C05746")+
+    geom_line(color = "#C05746")+
+    theme_bw()+
+    theme(axis.line.x = element_blank(),
+          axis.title.x = element_blank(),
+          axis.text.y = element_blank())+
+    ylab(element_blank())+
+    scale_y_continuous(limits = c(0.0, 1), breaks = seq(0.0, 1.0, by = 0.1))+
+    facet_wrap(~ country, nrow = 1) 
+  return(g)
+}
+
+plotFOIXY <- function(foimatrix){
+  g <- ggplot(foimatrix, aes(x = Year, ymin = lo, ymax = hi, y = FOI))+
+    geom_ribbon(alpha= 0.2, fill = "#C05746")+
+    geom_line(color = "#C05746")+
+    theme_bw()+
+    theme(axis.text.y = element_text(angle = 45, hjust = 1, size = 8)) +
+    ylab(element_blank())+
+    scale_y_continuous(limits = c(0.0, 1), breaks = seq(0.0, 1.0, by = 0.1))+
+    xlab(element_blank())+
+    facet_wrap(~ country, nrow = 1) 
+  return(g)
+}
+
+
+
+```
+
+
+```{r FOI plot, echo = FALSE}
+foi1 <- plotFOIXY(foimat1)
+extract1 <- foiextract_con(mcmcMatrix1)
+foi1 <- plot_foi_con(extract1, 1946, 2016, country = "Brazil (São Francisco)")
+foi1
+
+foi2 <- plotFOIXOnly(foimat2)
+extract2 <- foiextract_epi1(mcmcMatrix2)
+foi2 <- plot_foi_epi1(extract2, 1938, 2018, country = "Brazil (Rio de Janeiro)")
+foi2
+
+
+foi3 <- plotFOIXOnly(foimat3)
+extract3 <- foiextract_epi1(mcmcMatrix3)
+foi3 <- plot_foi_epi1(extract2, 1938, 2018, country = "Brazil (Juazeiro do Norte)")
+foi3
+
+foi4 <- plotFOIXY(foimat4)
+extract4 <- foiextract_epi1(mcmcMatrix5)
+foi4 <- plot_foi_epi1(extract4, 1935, 2015, country = "Brazil (Feira de Santana)")
+foi4
+
+foi5 <- plotFOIXOnly(foimat5)
+extract5 <- foiextract_con(mcmcMatrix6)
+foi5 <- plot_foi_con(extract5, 1971, 2016, country = "Brazil (Cruzeiro do Sul)")
+foi5
+
+foi6 <- plotFOIXOnly(foimat6)
+extract6 <- foiextract_con(mcmcMatrix8)
+foi6 <- plot_foi_con(extract6, 1937, 2017, country = "Brazil (Salvador)")
+foi6
+
+foi7 <- plotFOIXY(foimat7)
+extract7 <- foiextract_epi1(mcmcMatrix9)
+foi7 <- plot_foi_epi1(extract7, 1936, 2016, country = "Brazil (Riachão do Jacuipe)")
+foi7
+
+foi8 <- plotFOIXOnly(foimat8)
+extract8 <- foiextract_epi3(mcmcMatrix12)
+foi8 <- plot_foi_epi3(extract8, 1939, 2019, country = "Brazil (Ceará)")
+foi8
+
+foi9 <- plotFOIXOnly(foimat9)
+extract9 <- foiextract_epi1(mcmcMatrix14)
+foi9 <- plot_foi_epi1(extract9, 1915, 2014, country = "Haiti")
+foi9
+
+foi10 <- plotFOIXY(foimat10)
+extract10 <- foiextract_epi2(mcmcMatrix10)
+foi10 <- plot_foi_epi2(extract10, 1976, 2019, country = "Mexico (Chiapas)")
+foi10
+
+foi11 <- plotFOIXOnly(foimat11)
+extract11 <- foiextract_epi4(mcmcMatrix13)
+foi11 <- plot_foi_epi4(extract11, 1935, 2015, country = "Nicaragua (Managua)")
+foi11
+
+foi12 <- plotFOIXOnly(foimat12)
+extract12 <- foiextract_epi1(mcmcMatrix4)
+foi12 <- plot_foi_epi1(extract12, 1937, 2015, country = "Puerto Rico")
+foi12
+
+#foi13 <- plotFOIXY(foimat13)
+extract13 <- foiextract_epi2(mcmcMatrix11)
+foi13 <- plot_foi_epi2(extract13, 1969, 2019, country = "Puerto Rico (Ponce)")
+foi13
+
+#foi14 <- plotFOIXOnly(foimat14)
+extract14 <- foiextract_epi1(mcmcMatrix7)
+foi14 <- plot_foi_epi1(extract14, 1956, 2015, country = "Virgin Island (U.S)")
+foi14
+
+#foi15 <- plotFOIXOnly(foimat15)
+extract15 <- foiextract_epi1(mcmcMatrix15)
+foi15 <- plot_foi_epi1(extract15, 1945, 2015, country = "Martinique")
+foi15
+
+#foi16 <- plotFOIXY(foimat16)
+extract16 <- foiextract_epi1(mcmcMatrix16)
+foi16 <- plot_foi_epi1(extract16, 1929, 2015, country = "Puerto Rico (Salinas)")
+foi16
+
+lac_foi_v2<-  grid.arrange(foi1, foi2, foi3, 
+                           foi4, foi5, foi6,
+                           foi7, foi8, foi9, 
+                           foi10, foi11, foi12,
+                           foi13, foi14, foi15,
+                           foi16,
+                           ncol=3,
+                           left = "FoI",
+                           bottom = "Year",
+                           top = "FoI in LAC (non-fever population based studies)")
+
+# for merge
+
+lac_foi<-  grid.arrange(foi1, foi2, foi3, 
+                        foi4, foi5, foi6,
+                        foi7, foi8, foi9, 
+                        foi10, foi11, foi12,
+                        foi13, foi14, foi15,
+                        foi16, ncol=3)
+ggsave("lac_foi.pdf", lac_foi, dpi=1000, device= "pdf", height=10, width=10,units="in", bg=NULL)
+
+# for present
+lacSerofoi<-  ggarrange(lac_sero, lac_foi, 
+          labels = c("A", "B"),
+          ncol = 2)
+
+ggsave("lacSerofoi.pdf", lacSerofoi, dpi=100, device= "pdf", height=8, width=12,units="in", bg=NULL)
+
+```
+
+
+
+```{r raw serograph}
+lac_igg$ymin <- lac_igg$lower
+lac_igg$ymax <- lac_igg$upper
+
+lacRawSero <- ggplot(lac_igg) +
+  geom_rect(aes(xmin = age_min, xmax = age_max, ymin = ymin, ymax = ymax, 
+                fill = as.factor(author)), alpha = 0.5) +
+  labs(x = "Age Group", y = "Seropositivity (%)", fill = "Study") +
+  theme_bw()+
+  facet_wrap(~country)+
+   theme(strip.text = element_text(size = 7))
+
+ggsave("lacRawSero.pdf", lacRawSero, dpi=100, device= "pdf", height=8, width=12,units="in", bg=NULL)
+
+```
+
+```{r save}
+save(outDf52, outDf124, outDf153, outDf165,
+     outDf174, outDf179, outDf229, outDf243,
+     outDf251, outDf260, outDf299, outDf345,
+     outDf396, outDf406, outDf503, outDf507,
+     mcmcMatrix1, mcmcMatrix2, mcmcMatrix3,
+     mcmcMatrix4, mcmcMatrix4, mcmcMatrix5,
+     mcmcMatrix6, mcmcMatrix7, mcmcMatrix8,
+     mcmcMatrix9, mcmcMatrix10, mcmcMatrix11,
+     mcmcMatrix12, mcmcMatrix13, mcmcMatrix14,
+     mcmcMatrix15, mcmcMatrix16, lac_sero, lac_foi, lacSerofoi, file = "LACOutDf.RData")
+
+save(foiextract_con, foiextract_epi1, foiextract_epi2,
+     foiextract_epi3, foiextract_epi4, plot_foi_con,
+     plot_foi_epi1, plot_foi_epi2, plot_foi_epi3,
+     plot_foi_epi4, file = "FOIfunctions.RData")
+save(quantmat_haiti, file = "quantmat_haiti.RData")
+```

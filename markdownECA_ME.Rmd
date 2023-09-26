@@ -1,0 +1,796 @@
+---
+title: "markdownECA/ME"
+output: html_document
+date: "2023-07-06"
+---
+
+```{r setup, include=FALSE}
+library(readxl)
+require(tidyverse)
+require(rjags)
+library(binom)
+library(ggplot2)
+library(dplyr)
+library(varhandle)
+require(MCMCvis)
+library(cowplot)
+library(viridis)
+library(hrbrthemes)
+library(ggridges)
+library(plotly)
+library(maps)
+library(rgdal)
+library(rgeos)
+library(sf)
+library(ggpubr)
+library(tidyr)
+library(ggridges)
+library(gridExtra)
+library(writexl)
+options(scipen = 999)
+```
+
+## R Markdown
+```{r setting, warning=FALSE}
+CountryModel <- read_excel("D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/all_countries/CountryModel.xlsx", 
+                           sheet = "inclusion", col_types = c("numeric", 
+                                                              "text", "numeric", "numeric", "numeric", 
+                                                              "numeric", "text", "text", "text", 
+                                                              "text", "text", "text", "text", "text", 
+
+                                                                                                                          "text", "text", "text"))
+View(CountryModel)
+#Rename data
+df_eca = CountryModel %>% filter(region == "ECA")
+
+df_eca[,c("midpoint","lower","upper")] = binom.confint(df_eca$N.pos, df_eca$N, method="exact")[,c("mean","lower","upper")]
+
+df_eca <-  df_eca %>% 
+  dplyr::mutate(agemid = (age_min+age_max)/2)
+
+study318  <-  df_eca %>% filter(study_no == 318)
+
+
+#Rename data
+df_me = CountryModel %>% filter(region == "ME")
+
+df_me[,c("midpoint","lower","upper")] = binom.confint(df_me$N.pos, df_me$N, method="exact")[,c("mean","lower","upper")]
+
+df_me <-  df_me %>% 
+  dplyr::mutate(agemid = (age_min+age_max)/2)
+
+df_me <- df_me %>% filter(!antibody %in% c("IgM"))
+
+study32  <-  df_me %>% filter(study_no == 32)
+study154  <-  df_me %>% filter(study_no == 154)
+study213  <-  df_me %>% filter(study_no == 213)
+
+me_igg  <- df_me[df_me$study_no %in% c(32, 154, 213),]
+eca_igg <- df_eca[df_eca$study_no %in% c(318),]
+ecame_igg <- rbind(me_igg, eca_igg)
+
+write_xlsx(ecame_igg, "D:/OneDrive - London School of Hygiene and Tropical Medicine/CHIK/1.Aim1/codes/CHIK/ecame_igg.xlsx")
+
+```
+
+```{r study 318}
+# constant model: test DIC
+jcode <- "model{ 
+	for (i in 1:4){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = 1-exp(-lambda*age[i]) #catalytic model
+	}
+		#  prior dists
+  lambda ~ dunif(0,1) #uninformative prior
+}"
+paramVector <- c("lambda")
+
+mcmc.length=50000
+jdat = list(n.pos= df_eca$N.pos,
+            N=df_eca$N,
+            age=df_eca$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix1 <- as.matrix(jpos)
+
+```
+
+```{r study 213}
+# constant model: test DIC
+jcode <- "model{ 
+	for (i in 9:15){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = 1-exp(-lambda*age[i]) #catalytic model
+	}
+		#  prior dists
+  lambda ~ dunif(0,1) #uninformative prior
+}"
+paramVector <- c("lambda")
+
+mcmc.length=50000
+jdat = list(n.pos= df_me$N.pos,
+            N=df_me$N,
+            age=df_me$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix2 <- as.matrix(jpos)
+
+```
+
+```{r study 154}
+# 1 epidemic
+jcode <- "model{ 
+	for (i in 5:8){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i] < (2011-delta),0,
+                            1-exp(-lambda))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda ~ dunif(0,1)       #uninformative prior
+  delta  ~ dunif(1993,2011) #uninformative prior
+}"
+paramVector <- c("lambda", "delta")
+
+mcmc.length=50000
+jdat = list(n.pos= df_me$N.pos,
+            N=df_me$N,
+            age=df_me$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix3 <- as.matrix(jpos)
+
+```
+
+```{r study 32}
+jcode <- "model{ 
+	for (i in 1:4){
+    n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
+    seropos_est[i] = ifelse(age[i]> (2018-delta2), 1-exp(-lambda1-lambda2)
+       ,ifelse(age[i]> (2007-delta1) && age[i] < 2, 1-exp(-lambda1),
+       0))
+    # time-varying catalytic model
+	}
+	#  prior dists
+  lambda1  ~ dunif(0,1)       #uninformative prior
+  lambda2  ~ dunif(0,1)       #uninformative prior
+  delta1  ~ dunif(2017,2018)
+  delta2  ~ dunif(2014,2016)
+}"
+paramVector <- c("lambda1","lambda2", "delta1", "delta2")
+
+mcmc.length=50000
+jdat = list(n.pos= df_me$N.pos,
+            N=df_me$N,
+            age=df_me$agemid)
+jmod = jags.model(textConnection(jcode), data=jdat, n.chains=4, n.adapt = 15000)
+update(jmod, 500)
+jpos = coda.samples(jmod, paramVector, n.iter=mcmc.length)
+
+summary(jpos) 
+mcmcMatrix4 <- as.matrix(jpos)
+
+```
+
+
+```{r Function}
+# credible interval
+constantCR <- function(paramVector, mcmcMatrix) {
+  
+  ager = 0:80
+  numSamples = 1000
+  
+  for(ii in 1:length(paramVector)) {
+  
+  outDf <- matrix(NA, nrow=numSamples, ncol=length(ager))
+  
+  for (kk in 1:numSamples ) {
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+    
+    lambdaSample <- mcmcMatrix[sample(nrow(mcmcMatrix), 1, replace=T), "lambda"]
+
+    newRow  <-  1-exp(-lambdaSample*ager)
+
+    outDf[kk,] <- newRow
+  }
+}
+  return(outDf)
+}
+constantCR_italy <- function(paramVector, mcmcMatrix) {
+  
+  ager = 0:100
+  numSamples = 1000
+  
+  for(ii in 1:length(paramVector)) {
+  
+  outDf <- matrix(NA, nrow=numSamples, ncol=length(ager))
+  
+  for (kk in 1:numSamples ) {
+    randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+    
+    lambdaSample <- mcmcMatrix[sample(nrow(mcmcMatrix), 1, replace=T), "lambda"]
+
+    newRow  <-  1-exp(-lambdaSample*ager)
+
+    outDf[kk,] <- newRow
+  }
+}
+  return(outDf)
+}
+
+Epi1CR <- function(paramVector, mcmcMatrix, ager1, ager2){
+  
+  numSamples = 1000
+  
+  for(ii in 1:length(paramVector)) {
+    
+    outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+    outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+    
+    
+    for (kk in 1:numSamples ) {
+      randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+      
+      lambdaSample <- mcmcMatrix[randomNumber,"lambda"]
+      deltaSample  <- mcmcMatrix[randomNumber,"delta"]
+      
+      newRow_1 <- 0
+      newRow_2 <- 1-exp(-lambdaSample)
+      
+      outDf_1[kk,] <- newRow_1
+      outDf_2[kk,] <- newRow_2
+      
+      outDf <- cbind(outDf_1,outDf_2)
+    }
+  }
+  return(outDf)
+}
+
+Epi2CR <- function(paramVector, mcmcMatrix, ager1, ager2, ager3){
+  numSamples = 1000
+  for(ii in 1:length(paramVector)) {
+    
+    outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+    outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+    outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(ager3))
+    
+    for (kk in 1:numSamples ) {
+      randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+      
+      lambdaSample1   <- mcmcMatrix[randomNumber,"lambda1"]
+      lambdaSample2   <- mcmcMatrix[randomNumber,"lambda2"]
+      deltaSample_1   <- mcmcMatrix[randomNumber,"delta1"]
+      deltaSample_2   <- mcmcMatrix[randomNumber,"delta2"]
+      
+      newRow_1 <- 0
+      newRow_2 <- 1-exp(-lambdaSample1)
+      newRow_3 <- 1-exp(-lambdaSample1-lambdaSample2)
+      
+      outDf_1[kk,] <- newRow_1
+      outDf_2[kk,] <- newRow_2
+      outDf_3[kk,] <- newRow_3
+      
+      outDf <- cbind(outDf_1,outDf_2,outDf_3)
+    }
+  }
+  return(outDf)
+}
+
+Epi3CR <- function(paramVector, mcmcMatrix, ager1, ager2, ager3, ager4){
+  numSamples = 1000
+  for(ii in 1:length(paramVector)) {
+    
+    outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+    outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+    outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(ager3))
+    outDf_4 <- matrix(NA,nrow=numSamples, ncol = length(ager4))
+    
+    for (kk in 1:numSamples ) {
+      randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+      
+      lambdaSample1    <- mcmcMatrix[randomNumber,"lambda1"]
+      lambdaSample2    <- mcmcMatrix[randomNumber,"lambda2"]
+      lambdaSample3    <- mcmcMatrix[randomNumber,"lambda3"]
+      
+      deltaSample_1   <- mcmcMatrix[randomNumber,"delta1"]
+      deltaSample_2   <- mcmcMatrix[randomNumber,"delta2"]
+      deltaSample_3   <- mcmcMatrix[randomNumber,"delta3"]
+      
+      newRow_1 <- 0
+      newRow_2 <- 1-exp(-lambdaSample1)
+      newRow_3 <- 1-exp(-lambdaSample1-lambdaSample2)
+      newRow_4 <- 1-exp(-lambdaSample1-lambdaSample2-lambdaSample3)
+      
+      outDf_1[kk,] <- newRow_1
+      outDf_2[kk,] <- newRow_2
+      outDf_3[kk,] <- newRow_3
+      outDf_4[kk,] <- newRow_4
+      
+      outDf <- cbind(outDf_1,outDf_2,outDf_3,outDf_4)
+    }
+  }
+  return(outDf)
+}
+
+Epi4CR <- function(paramVector, mcmcMatrix, ager1, ager2, ager3, ager4, ager5){
+  numSamples = 1000
+  for(ii in 1:length(paramVector)) {
+    
+    outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+    outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+    outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(ager3))
+    outDf_4 <- matrix(NA,nrow=numSamples, ncol = length(ager4))
+    outDf_5 <- matrix(NA,nrow=numSamples, ncol = length(ager5))
+    
+    for (kk in 1:numSamples ) {
+      randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+      
+      lambdaSample1    <- mcmcMatrix[randomNumber,"lambda1"]
+      lambdaSample2    <- mcmcMatrix[randomNumber,"lambda2"]
+      lambdaSample3    <- mcmcMatrix[randomNumber,"lambda3"]
+      lambdaSample4    <- mcmcMatrix[randomNumber,"lambda4"]
+      
+      deltaSample_1   <- mcmcMatrix[randomNumber,"delta1"]
+      deltaSample_2   <- mcmcMatrix[randomNumber,"delta2"]
+      deltaSample_3   <- mcmcMatrix[randomNumber,"delta3"]
+      deltaSample_4   <- mcmcMatrix[randomNumber,"delta4"]
+      
+      newRow_1 <- 0
+      newRow_2 <- 1-exp(-lambdaSample1)
+      newRow_3 <- 1-exp(-(lambdaSample1+lambdaSample2))
+      newRow_4 <- 1-exp(-(lambdaSample1+lambdaSample2+lambdaSample3))
+      newRow_5 <- 1-exp(-(lambdaSample1+lambdaSample2+lambdaSample3+lambdaSample4))
+      
+      outDf_1[kk,] <- newRow_1
+      outDf_2[kk,] <- newRow_2
+      outDf_3[kk,] <- newRow_3
+      outDf_4[kk,] <- newRow_4
+      outDf_5[kk,] <- newRow_5
+      
+      outDf <- cbind(outDf_1,outDf_2,outDf_3,outDf_4,outDf_5)
+    }
+  }
+  return(outDf)
+}
+
+Epi5Con <- function(paramVector, mcmcMatrix, ager1, ager2, ager3, ager4, ager5,ager6){
+  numSamples = 1000
+  for(ii in 1:length(paramVector)) {
+    
+    outDf_1 <- matrix(NA,nrow=numSamples, ncol = length(ager1))
+    outDf_2 <- matrix(NA,nrow=numSamples, ncol = length(ager2))
+    outDf_3 <- matrix(NA,nrow=numSamples, ncol = length(ager3))
+    outDf_4 <- matrix(NA,nrow=numSamples, ncol = length(ager4))
+    outDf_5 <- matrix(NA,nrow=numSamples, ncol = length(ager5))
+    outDf_6 <- matrix(NA,nrow=numSamples, ncol = length(ager6))
+    
+    for (kk in 1:numSamples ) {
+      randomNumber <- floor(runif(1, min = 1, max = nrow(mcmcMatrix)))
+      
+      lambdaSample1    <- mcmcMatrix[randomNumber,"lambda1"]
+      lambdaSample2    <- mcmcMatrix[randomNumber,"lambda2"]
+      lambdaSample3    <- mcmcMatrix[randomNumber,"lambda3"]
+      lambdaSample4    <- mcmcMatrix[randomNumber,"lambda4"]
+      lambdaSample5    <- mcmcMatrix[randomNumber,"lambda5"]
+      
+      deltaSample_1   <- mcmcMatrix[randomNumber,"delta1"]
+      deltaSample_2   <- mcmcMatrix[randomNumber,"delta2"]
+      deltaSample_3   <- mcmcMatrix[randomNumber,"delta3"]
+      deltaSample_4   <- mcmcMatrix[randomNumber,"delta4"]
+      deltaSample_5   <- mcmcMatrix[randomNumber,"delta5"]
+      
+      newRow_1 <- 0
+      newRow_2 <- 1-exp(-lambdaSample1)
+      newRow_3 <- 1-exp(-(lambdaSample1+lambdaSample2))
+      newRow_4 <- 1-exp(-(lambdaSample1+lambdaSample2+lambdaSample3))
+      newRow_5 <- 1-exp(-(lambdaSample1+lambdaSample2+lambdaSample3+lambdaSample4))
+      newRow_5 <- 1-exp(-(lambdaSample1+lambdaSample2+lambdaSample3+lambdaSample4))
+      newRow_6 <- 1-exp(-lambdaSample5*ager6)
+      
+      outDf_1[kk,] <- newRow_1
+      outDf_2[kk,] <- newRow_2
+      outDf_3[kk,] <- newRow_3
+      outDf_4[kk,] <- newRow_4
+      outDf_5[kk,] <- newRow_5
+      outDf_6[kk,] <- newRow_6
+      
+      outDf <- cbind(outDf_1,outDf_2,outDf_3,outDf_4,outDf_5,outDf_6)
+    }
+  }
+  return(outDf)
+  
+}
+
+# get quantile matrices function
+quantmat <- function(outDf){
+  ager = 0:80
+  quantileMatrix <- matrix(NA,nrow=ncol(outDf), ncol = 3)
+  for(jj in 1:ncol(outDf)){
+    quantiles <- outDf[,jj] %>% quantile(probs=c(.5,.025,.975))
+    quantileMatrix[jj,] <- quantiles
+  }
+  df_upperLower <- cbind(ager, quantileMatrix)
+  df_upperLower <- as.data.frame(df_upperLower)
+  colnames(df_upperLower) <- c('agemid', 'mean', 'upper', 'lower')
+  return(df_upperLower)
+}
+quantmat_italy <- function(outDf){
+  ager = 0:100
+  quantileMatrix <- matrix(NA,nrow=ncol(outDf), ncol = 3)
+  for(jj in 1:ncol(outDf)){
+    quantiles <- outDf[,jj] %>% quantile(probs=c(.5,.025,.975))
+    quantileMatrix[jj,] <- quantiles
+  }
+  df_upperLower <- cbind(ager, quantileMatrix)
+  df_upperLower <- as.data.frame(df_upperLower)
+  colnames(df_upperLower) <- c('agemid', 'mean', 'upper', 'lower')
+  return(df_upperLower)
+}
+
+plotfuncXY <- function(df_upperLower, study){
+  g <- ggplot()+
+    geom_line(data = df_upperLower, aes(x=agemid, y=mean), color = "#558C8C")+
+    geom_ribbon(data = df_upperLower, alpha=0.2, aes(x=agemid, y=mean, ymin=lower, ymax=upper), fill = "#558C8C")+
+    geom_point(data = study, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+    geom_linerange(data = study, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+
+    theme_bw()+
+    theme(axis.line.x = element_blank(),
+          axis.title.x = element_blank())+
+    scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+    ylim(0, 1)+
+    xlab(element_blank()) + 
+    ylab(element_blank())+
+    scale_fill_viridis(discrete = T)+
+    facet_wrap(~ country, nrow = 1)+
+    theme(strip.text = element_text(size = 10))
+  return(g)
+}
+
+plotfuncNone <- function(df_upperLower, study){
+  g <- ggplot()+
+    geom_line(data = df_upperLower, aes(x=agemid, y=mean), color = "#558C8C")+
+    geom_ribbon(data = df_upperLower, alpha=0.2, aes(x=agemid, y=mean, ymin=lower, ymax=upper), fill = "#558C8C")+
+    geom_point(data = study, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+    geom_linerange(data = study, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+
+    theme_bw()+
+    theme(axis.line.x = element_blank(),
+          axis.text.x = element_blank(),
+          axis.title.x = element_blank(),
+          axis.text.y = element_blank())+
+    scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+    ylim(0, 1)+
+    xlab(element_blank()) + 
+    ylab(element_blank())+
+    scale_fill_viridis(discrete = T)+
+    facet_wrap(~ country, nrow = 1) 
+  return(g)
+}
+
+#ggplot function 1) y axis only 
+plotfuncYonly <- function(df_upperLower, study){
+  g <- ggplot()+
+    geom_line(data = df_upperLower, aes(x=agemid, y=mean), color = "#558C8C")+
+    geom_ribbon(data = df_upperLower, alpha=0.2, aes(x=agemid, y=mean, ymin=lower, ymax=upper), fill = "#558C8C")+
+    geom_point(data = study, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+    geom_linerange(data = study, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+
+    theme_bw()+
+    theme(axis.line.x = element_blank(),
+          axis.text.x = element_blank(),
+          axis.title.x = element_blank())+
+    scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+    ylim(0, 1)+
+    xlab(element_blank()) + 
+    ylab(element_blank())+
+    scale_fill_viridis(discrete = T)+
+    facet_wrap(~ country, nrow = 1) 
+  return(g)
+}
+#ggplot function 1) x axis only 
+plotfuncXonly <- function(df_upperLower, study){
+  g <- ggplot()+
+    geom_line(data = df_upperLower, aes(x=agemid, y=mean), color = "#558C8C")+
+    geom_ribbon(data = df_upperLower, alpha=0.2, aes(x=agemid, y=mean, ymin=lower, ymax=upper), fill = "#558C8C")+
+    geom_point(data = study, aes(x=agemid, y=midpoint), color = "#558C8C")+  
+    geom_linerange(data = study, aes(x=agemid, ymin=lower, ymax=upper), color = "#558C8C")+
+    theme_bw()+
+    theme(axis.line.x = element_blank(),
+          axis.title.x = element_blank(),
+          axis.text.y = element_blank())+
+    scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+    ylim(0, 1)+
+    xlab(element_blank()) + 
+    ylab(element_blank())+
+    scale_fill_viridis(discrete = T)+
+    facet_wrap(~ country, nrow = 1) 
+  return(g)
+}
+
+
+```
+
+```{r result}
+outDf318 <- constantCR_italy(paramVector, mcmcMatrix1)
+df_upperLower318 <- quantmat_italy(outDf318)
+g11<- plot318 <- plotfuncNone(df_upperLower318, study318)
+
+outDf213 <- constantCR(paramVector, mcmcMatrix2)
+df_upperLower213 <- quantmat(outDf213)
+g12<- plot213 <- plotfuncXonly(df_upperLower213, study213)
+
+outDf154 <- Epi1CR(paramVector, mcmcMatrix3, ager1 = 0:5, ager2 = 6:80)
+df_upperLower154 <- quantmat(outDf154)
+g13<- plot154 <- plotfuncXY(df_upperLower154, study154)
+
+outDf32 <- Epi2CR(paramVector, mcmcMatrix4, ager1 = 0:0, ager2 = 1:2, ager3= 3:80)
+df_upperLower32 <- quantmat(outDf32)
+g14<- plot32 <- plotfuncXonly(df_upperLower32, study32)
+
+```
+
+```{r seroprevalence plot, echo=FALSE}
+empty1 <- ggplot() + theme_void()
+empty2 <- ggplot() + theme_void()
+empty3 <- ggplot() + theme_void()
+empty4 <- ggplot() + theme_void()
+empty5 <- ggplot() + theme_void()
+empty6 <- ggplot() + theme_void()
+empty7 <- ggplot() + theme_void()
+empty8 <- ggplot() + theme_void()
+
+eca_sero<-  grid.arrange(g1,ncol =1)
+
+eca_sero
+ggsave("eca_sero.pdf", eca_sero, dpi=1000, device= "pdf", height=5, width=7,units="in", bg=NULL)
+
+me_sero <- grid.arrange(g2,g3,g4, 
+                        ncol = 1)
+me_sero
+ggsave("me_sero.pdf", me_sero, dpi=1000, device= "pdf", height=5, width=7,units="in", bg=NULL)
+
+ecame <- plot_grid(eca_sero, me_sero, ncol = 1, rel_heights = c(1, 2), labels = c("E", "F"))
+
+filepath1 <- "~/Library/CloudStorage/OneDrive-LondonSchoolofHygieneandTropicalMedicine/CHIK/1.Aim1/codes/CHIK/ssa_lac_ecame.pdf"
+pdf(file = filepath1, width = 16, height = 10)
+
+ggarrange(ssa_lac, ecame, 
+          ncol = 2, 
+          nrow = 1, 
+          left = "Seroprevalence",
+          bottom = "Age")
+
+dev.off()
+
+eca  <- ggarrange(eca_sero, 
+          labels = c("E"),
+          ncol = 1)
+ggsave("eca.pdf", eca, dpi=1000, device= "pdf", height=5, width=6,units="in", bg=NULL)
+
+me  <- ggarrange(g2,g3,g4,  
+          labels = c("F"),
+          ncol = 3, nrow=1)
+ggsave("me.pdf", me, dpi=1000, device= "pdf", height=3, width=8,units="in", bg=NULL)
+
+
+# sample graphs (for presentation)
+g1 <- plotfuncYonly(df_upperLower318, study318)
+g2 <- plotfuncNone(df_upperLower213, study213)
+g3 <- plotfuncXY(df_upperLower154, study154)
+g4 <- plotfuncXonly(df_upperLower32, study32)
+ecame_vimc <- grid.arrange(g1,g2,g3,g4, ncol = 2,
+                         left = "Seroprevalence",
+                         bottom = "Age")
+ggsave("ecame_vimc.pdf", ecame_vimc, dpi=1000, device= "pdf", height=5, width=7,units="in", bg=NULL)
+
+```
+
+```{r ALL graph}
+seroAll <-  ggarrange(ssa_sero, lac_sero, eap_sero, me_sero, eca_sero, sa_sero, 
+          labels = c("A", "B", "C", "D", "E", "F"),
+          ncol = 3, nrow = 2, align = "hv")
+seroAll
+
+ggsave("allsero.pdf", seroAll, dpi=1000, device= "pdf", height= 14, width=28,units="in", bg=NULL)
+
+```
+
+```{r FOI matrix}
+# study318
+mcmcMatrix1 <- as.data.frame(mcmcMatrix1)
+foimat1 <- as.data.frame(matrix(NA, nrow = 2, ncol = 4))
+colnames(foimat1) <- c("Year", "FOI", "lo", "hi")
+foimat1[,1] <- c(1907, 2007)
+foimat1[1:2,2] <- quantile(mcmcMatrix1$lambda, c(0.5))
+foimat1[1:2,3] <- quantile(mcmcMatrix1$lambda, c(0.025))
+foimat1[1:2,4] <- quantile(mcmcMatrix1$lambda, c(0.975))
+foimat1$country <- c("Italy")
+
+# study213
+mcmcMatrix2 <- as.data.frame(mcmcMatrix2)
+foimat2 <- as.data.frame(matrix(NA, nrow = 2, ncol = 4))
+colnames(foimat2) <- c("Year", "FOI", "lo", "hi")
+foimat2[,1] <- c(1939, 2014)
+foimat2[1:2,2] <- quantile(mcmcMatrix2$lambda, c(0.5))
+foimat2[1:2,3] <- quantile(mcmcMatrix2$lambda, c(0.025))
+foimat2[1:2,4] <- quantile(mcmcMatrix2$lambda, c(0.975))
+foimat2$country <- c("Qatar")
+
+# study154
+mcmcMatrix3 <- as.data.frame(mcmcMatrix3)
+foimat3 <- as.data.frame(matrix(NA, nrow = 4, ncol = 4))
+colnames(foimat3) <- c("Year", "FOI", "lo", "hi")
+foimat3[,1] <- c(1931,2006,2006,2011)
+foimat3[1:2,2] <- quantile(mcmcMatrix3$lambda, c(0.5))
+foimat3[1:2,3] <- quantile(mcmcMatrix3$lambda, c(0.025))
+foimat3[1:2,4] <- quantile(mcmcMatrix3$lambda, c(0.975))
+foimat3[3:4,2:4] <- 0
+foimat3$country <- c("Djibouti (District1-4)")
+
+# study32
+mcmcMatrix4 <- as.data.frame(mcmcMatrix4)
+foimat4 <- as.data.frame(matrix(NA, nrow = 6, ncol = 4))
+colnames(foimat4) <- c("Year", "FOI", "lo", "hi")
+foimat4[,1] <- c(2004,2015, 2015,2017,2017,2018)
+foimat4[1:2,2] <- quantile(mcmcMatrix4$lambda2, c(0.5))
+foimat4[1:2,3] <- quantile(mcmcMatrix4$lambda2, c(0.025))
+foimat4[1:2,4] <- quantile(mcmcMatrix4$lambda2, c(0.975))
+
+foimat4[3:4,2] <- quantile(mcmcMatrix4$lambda1, c(0.5))
+foimat4[3:4,3] <- quantile(mcmcMatrix4$lambda1, c(0.025))
+foimat4[3:4,4] <- quantile(mcmcMatrix4$lambda1, c(0.975))
+foimat4[5:6,2:4] <- 0
+foimat4$country <- c("Iran (Tehran)")
+
+all_objects <- list()
+
+# Loop over the names of your objects
+for (i in 1:4) {
+  # Generate the name of the object
+  name <- paste("foimat", i, sep = "")
+  
+  # Get the object by its name and store it in the list
+  all_objects[[i]] <- get(name)
+}
+
+# Now, all_objects is a list of your objects
+
+foimatME <- do.call(rbind, all_objects)
+write.csv(foimatME, file = "foimatME.csv", row.names = FALSE)
+
+```
+
+```{r FOI func}
+# second version FoI graph
+plotFOIXY <- function(foimatrix){
+  g <- ggplot(foimatrix, aes(x = Year, ymin = lo, ymax = hi, y = FOI))+
+    geom_ribbon(alpha= 0.2, fill = "#C05746")+
+    geom_line(color = "#C05746")+
+    theme_bw()+
+    theme(axis.text.y = element_text(angle = 45, hjust = 1, size = 8)) +
+    ylab(element_blank())+
+    scale_y_continuous(limits = c(0.0, 1), breaks = seq(0.0, 1.0, by = 0.1))+
+    xlab(element_blank())+
+    facet_wrap(~ country, nrow = 1) 
+  return(g)
+}
+
+plotFOIXOnly <- function(foimatrix){
+  g <- ggplot(foimatrix, aes(x = Year, ymin = lo, ymax = hi, y = FOI))+
+    geom_ribbon(alpha= 0.2, fill = "#C05746")+
+    geom_line(color = "#C05746")+
+    theme_bw()+
+    theme(axis.line.x = element_blank(),
+          axis.title.x = element_blank(),
+          axis.text.y = element_blank())+
+    ylab(element_blank())+
+    scale_y_continuous(limits = c(0.0, 1), breaks = seq(0.0, 1.0, by = 0.1))+
+    facet_wrap(~ country, nrow = 1) 
+  return(g)
+}
+```
+
+
+```{r FOI plot, echo = FALSE}
+foi1 <- plotFOIXY(foimat1)
+foi1
+
+foi2 <- plotFOIXY(foimat2)
+foi2
+
+foi3 <- plotFOIXOnly(foimat3)
+foi3
+
+foi4 <- plotFOIXY(foimat4)
+foi4 
+
+eca_foi <-  grid.arrange(foi1, empty1, empty2, empty3,
+                         empty4, empty5,empty1, empty2, 
+                         empty2, ncol =3)
+me_foi <-  grid.arrange(foi1, foi2, foi3, foi4, ncol =3)
+
+foiAll <- ggarrange(ssa_foi, lac_foi, eap_foi, me_foi, eca_foi, sa_foi, 
+          labels = c("A", "B", "C", "D", "E", "F"),
+          ncol = 3, nrow = 2, align = "hv")
+foiAll
+
+ggsave("foiAll.pdf", foiAll, dpi=50, device= "pdf", units="in", height = 18, width = 36, bg=NULL)
+
+# for present
+meSerofoi<-  ggarrange(me_sero, me_foi, 
+          labels = c("A", "B"),
+          ncol = 2)
+
+ggsave("meSerofoi.pdf", meSerofoi, dpi=1000, device= "pdf", height=4, width=12,units="in", bg=NULL)
+
+```
+```{r raw serograph}
+ecame_igg$ymin <- ecame_igg$lower
+ecame_igg$ymax <- ecame_igg$upper
+
+ecameRawSero <- ggplot(ecame_igg) +
+  geom_rect(aes(xmin = age_min, xmax = age_max, ymin = ymin, ymax = ymax, 
+                fill = as.factor(author)), alpha = 0.5) +
+  labs(x = "Age Group", y = "Seropositivity (%)", fill = "Study") +
+  theme_bw()+
+  facet_wrap(~country)+
+   theme(strip.text = element_text(size = 9))
+
+ggsave("ecameRawSero.pdf", ecameRawSero, dpi=100, device= "pdf", height=8, width=12,units="in", bg=NULL)
+```
+
+```{r }
+df_subset <- list()
+for(i in study) {
+   study <- c(75, 341, 281, 452, 277,146, 423, 234)
+   result <- df_eap %>% filter(study_no == i)
+   df_subset[[i]] <- result
+}
+sumresult <- list()
+for(i in study){
+   study <- c(75, 341, 281, 452, 277,146, 423, 234)
+ result <- sum(df_subset[[i]]$N)
+ sumresult[[i]] <- result
+}
+sumresult1 <- do.call(rbind, sumresult)
+
+diagresult <- list()
+for(i in study){
+   study <- c(75, 341, 281, 452, 277,146, 423, 234)
+ result <- df_subset[[i]]$antibody
+ diagresult[[i]] <- result
+}
+diagresult1 <- do.call(rbind, diagresult)
+
+year <- list()
+for(i in study){
+   study <- c(75, 341, 281, 452, 277,146, 423, 234)
+ result <- df_subset[[i]]$year
+ year[[i]] <- result
+}
+year1 <- do.call(rbind, year)
+
+testtype <- list()
+for(i in study){
+   study <- c(75, 341, 281, 452, 277,146, 423, 234)
+ result <- sum(df_subset[[i]]$N.pos)
+ result <- df_subset[[i]]$diagnostics
+ testtype[[i]] <- result
+}
+testtype1 <- do.call(rbind, testtype)
+```
+
+
+```{r save}
+save(outDf318, outDf213, outDf154, outDf32,
+     mcmcMatrix1, mcmcMatrix2, mcmcMatrix3,
+     mcmcMatrix4, file = "ECAMEOutDf.RData")
+save(quantmat_italy, file = "quantmat_italy.RData")
+````
