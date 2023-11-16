@@ -57,7 +57,7 @@ study494     <-  df_ssa %>% filter(study_no == 494)
 
 # constant model: test DIC
 jcode <- "model{ 
-	for (i in 48:51){
+	for (i in 105:111){
     n.pos[i] ~ dbinom(seropos_est[i],N[i]) #fit to binomial data
     seropos_est[i] = 1-exp(-lambda*age[i]) #catalytic model
 	}
@@ -1783,7 +1783,6 @@ plotFOIXOnly <- function(foimatrix){
   return(g)
 }
 
-
 # study170
 mcmcMatrix <- as.data.frame(mcmcMatrix)
 foimat1 <- as.data.frame(matrix(NA, nrow = 2, ncol = 4))
@@ -1939,7 +1938,6 @@ foimat10[9:10,2:4] <- 0
 foimat10$country <- c("Kenya")
 
 
-
 # study 279
 mcmcMatrix <- as.data.frame(mcmcMatrix)
 foimat11 <- as.data.frame(matrix(NA, nrow = 10, ncol = 4))
@@ -1985,9 +1983,9 @@ foimat12[7:8,2] <- quantile(mcmcMatrix$lambda4, c(0.5))
 foimat12[7:8,3] <- quantile(mcmcMatrix$lambda4, c(0.025))
 foimat12[7:8,4] <- quantile(mcmcMatrix$lambda4, c(0.975))
 
-foimat12[9:10,2] <- quantile(mcmcMatrix$lambda4, c(0.5))
-foimat12[9:10,3] <- quantile(mcmcMatrix$lambda4, c(0.025))
-foimat12[9:10,4] <- quantile(mcmcMatrix$lambda4, c(0.975))
+foimat12[9:10,2] <- quantile(mcmcMatrix$lambda5, c(0.5))
+foimat12[9:10,3] <- quantile(mcmcMatrix$lambda5, c(0.025))
+foimat12[9:10,4] <- quantile(mcmcMatrix$lambda5, c(0.975))
 
 foimat12[11:12,2:4] <- 0
 foimat12$country <- c("Burkina Faso")
@@ -2016,3 +2014,292 @@ ssa_foi<-  grid.arrange(g1, g2, g3, g4,
                           bottom = "Year",
                           top = "FoI in SSA (non-fever population based studies)")
 ggsave("ssaFOI.pdf", ssa_foi, dpi=1000, device= "pdf", height=8, width=10,units="in", bg=NULL)
+
+
+# second version FoI graph
+plotFOIXY_const <- function(df){
+  g <- ggplot(df, aes(x = Year, y = FOI))+
+    geom_point(color = "#FDE725FF")+
+    geom_errorbar(aes(ymin = lo, ymax = hi), color = "#FDE725FF", width = 0, linewidth = 1)+
+    labs(x = "Year", y = "FoI")+ 
+    theme_bw()+
+    facet_wrap(~ country, nrow = 1)+
+    scale_y_continuous(limits = c(0.0, 1.0), breaks = seq(0.0, 1.0, by = 0.05))+
+    scale_x_continuous(limits = c(1900, 2023), breaks = seq(1900, 2023, by = 10))+
+    theme(axis.line.x = element_blank(),
+          axis.title.x = element_blank(),
+          axis.text.x = element_blank())+
+    ylab(element_blank())
+    return(g)
+}
+plotFOIXY_epi1 <- function(df){
+  g <- ggplot(df, aes(x = Year, y = FOI))+
+    geom_point(color = "#B4DE2CFF")+
+    geom_errorbar(aes(ymin = lo, ymax = hi), color = "#B4DE2CFF", width = 0, linewidth = 1)+
+    labs(x = "Year", y = "FoI")+ 
+    theme_bw()+
+    facet_wrap(~ country, nrow = 1)+
+    scale_y_continuous(limits = c(0.0, 1.0), breaks = seq(0.0, 1.0, by = 0.05))+
+    scale_x_continuous(limits = c(1900, 2023), breaks = seq(1900, 2023, by = 10))+
+    ylab(element_blank())+
+    theme(axis.line.x = element_blank(),
+          axis.title.x = element_blank(),
+          axis.text.y = element_blank())
+    return(g)
+}
+plotFOIXY_epi2 <- function(df){
+  g <- ggplot(df, aes(x = Year, y = FOI))+
+    geom_point(color = "#6DCD59FF")+
+    geom_errorbar(aes(ymin = lo, ymax = hi), color = "#6DCD59FF", width = 0, linewidth = 1)+
+    labs(x = "Year", y = "FoI")+ 
+    theme_bw()+
+    facet_wrap(~ country, nrow = 1)+
+    scale_y_continuous(limits = c(0.0, 1.0), breaks = seq(0.0, 1.0, by = 0.05))+
+    scale_x_continuous(limits = c(1900, 2023), breaks = seq(1900, 2023, by = 10))+
+    ylab(element_blank())
+    return(g)
+}
+plotFOIXY_epi3 <- function(df){
+  g <- ggplot(df, aes(x = Year, y = FOI))+
+    geom_point(color = "#35B779FF")+
+    geom_errorbar(aes(ymin = lo, ymax = hi), color = "#35B779FF", width = 0, linewidth = 1)+
+    labs(x = "Year", y = "FoI")+ 
+    theme_bw()+
+    facet_wrap(~ country, nrow = 1)+
+    scale_y_continuous(limits = c(0.0, 1.0), breaks = seq(0.0, 1.0, by = 0.05))+
+    scale_x_continuous(limits = c(1900, 2023), breaks = seq(1900, 2023, by = 10))+
+    ylab(element_blank())
+    return(g)
+}
+plotFOIXY_epi4 <- function(df){
+  g <- ggplot(df, aes(x = Year, y = FOI))+
+    geom_point(color = "#1F9E89FF")+
+    geom_errorbar(aes(ymin = lo, ymax = hi), color = "#1F9E89FF", width = 0, linewidth = 1)+
+    scale_color_manual(values = "#1F9E89FF") +
+    labs(x = "Year", y = "FoI")+ 
+    theme_bw()+
+    facet_wrap(~ country, nrow = 1)+
+    scale_y_continuous(limits = c(0.0, 1.0), breaks = seq(0.0, 1.0, by = 0.05))+
+    scale_x_continuous(limits = c(1900, 2023), breaks = seq(1900, 2023, by = 10))+
+    theme(axis.line.x = element_blank(),
+          axis.title.x = element_blank(),
+          axis.text.x = element_blank(),
+          axis.text.y = element_blank())+
+    ylab(element_blank())
+    return(g)
+}
+plotFOIXY_epi5 <- function(df){
+  g <- ggplot(df, aes(x = Year, y = FOI))+
+    geom_point(color = "#26828EFF")+
+    geom_errorbar(aes(ymin = lo, ymax = hi), color = "#26828EFF", width = 0, linewidth = 1)+
+    labs(x = "Year", y = "FoI")+ 
+    theme_bw()+
+    facet_wrap(~ country, nrow = 1)+
+    scale_y_continuous(limits = c(0.0, 1.0), breaks = seq(0.0, 1.0, by = 0.05))+
+    scale_x_continuous(limits = c(1900, 2023), breaks = seq(1900, 2023, by = 10))+
+    theme(axis.line.x = element_blank(),
+          axis.title.x = element_blank(),
+          axis.text.x = element_blank(),
+          axis.text.y = element_blank())+
+    ylab(element_blank())
+  return(g)
+}
+plotFOIXY_ethi <- function(df){
+  g <- ggplot(df, aes(x = Year, y = FOI, color = model))+
+    geom_point()+
+    geom_errorbar(aes(ymin = lo, ymax = hi), width = 0, linewidth = 1)+
+    scale_color_manual(values = c("const" = "#FDE725FF", "epi" = "#6DCD59FF")) +
+    labs(x = "Year", y = "FoI")+ 
+    theme_bw()+
+    facet_wrap(~ country, nrow = 1)+
+    scale_y_continuous(limits = c(0.0, 1.0), breaks = seq(0.0, 1.0, by = 0.05))+
+    scale_x_continuous(limits = c(1900, 2023), breaks = seq(1900, 2023, by = 10))+
+    theme(legend.position = "none")+
+    theme(axis.line.x = element_blank(),
+          axis.title.x = element_blank(),
+          axis.text.x = element_blank(),
+          axis.text.y = element_blank())+
+    ylab(element_blank())
+  return(g)
+}
+plotFOIXY_gabon <- function(df){
+  g <- ggplot(df, aes(x = Year, y = FOI, color = model))+
+    geom_point()+
+    geom_errorbar(aes(ymin = lo, ymax = hi), width = 0, linewidth = 1)+
+    scale_color_manual(values = c("epi2" = "#6DCD59FF", "epi3" = "#35B779FF")) +
+    labs(x = "Year", y = "FoI")+ 
+    theme_bw()+
+    facet_wrap(~ country, nrow = 1)+
+    scale_y_continuous(limits = c(0.0, 1.0), breaks = seq(0.0, 1.0, by = 0.05))+
+    scale_x_continuous(limits = c(1900, 2023), breaks = seq(1900, 2023, by = 10))+
+    theme(legend.position = "none")+
+    theme(axis.line.x = element_blank(),
+          axis.title.x = element_blank(),
+          axis.text.x = element_blank())+
+    ylab(element_blank())
+  return(g)
+}
+plotFOIXY_senegal <- function(df){
+  g <- ggplot(df, aes(x = Year, y = FOI, color = model))+
+    geom_point()+
+    geom_errorbar(aes(ymin = lo, ymax = hi), width = 0, linewidth = 1, size = 1.5)+
+    scale_color_manual(values = c("epi1" = "#B4DE2CFF", "const" = "#FDE725FF")) +
+    labs(x = "Year", y = "FoI")+ 
+    theme_bw()+
+    facet_wrap(~ country, nrow = 1)+
+    scale_y_continuous(limits = c(0.0, 1.0), breaks = seq(0.0, 1.0, by = 0.05))+
+    scale_x_continuous(limits = c(1900, 2023), breaks = seq(1900, 2023, by = 10))+
+    theme(legend.position = "none")+
+    theme(axis.line.x = element_blank(),
+          axis.title.x = element_blank(),
+          axis.text.x = element_blank(),
+          axis.text.y = element_blank())+
+    ylab(element_blank())
+  return(g)
+}
+plotFOIXY_zambia <- function(df){
+  g <- ggplot(df, aes(x = Year, y = FOI))+
+    geom_point(color = "#1F9E89FF")+
+    geom_errorbar(aes(ymin = lo, ymax = hi), color = "#1F9E89FF", width = 0, linewidth = 1)+
+    scale_color_manual(values = "#1F9E89FF") +
+    labs(x = "Year", y = "FoI")+ 
+    theme_bw()+
+    facet_wrap(~ country, nrow = 1)+
+    scale_y_continuous(limits = c(0.0, 1.0), breaks = seq(0.0, 1.0, by = 0.05))+
+    scale_x_continuous(limits = c(1900, 2023), breaks = seq(1900, 2023, by = 10))+
+    ylab(element_blank())+
+    xlab(element_blank())+  # Remove the x-axis label
+    theme(axis.line.x = element_blank())
+  return(g)
+}
+plotFOIXY_cameroon <- function(df){
+  g <- ggplot(df, aes(x = Year, y = FOI))+
+    geom_point(color = "#1F9E89FF")+
+    geom_errorbar(aes(ymin = lo, ymax = hi), color = "#1F9E89FF", width = 0, linewidth = 1)+
+    scale_color_manual(values = "#1F9E89FF") +
+    labs(x = "Year", y = "FoI")+ 
+    theme_bw()+
+    facet_wrap(~ country, nrow = 1)+
+    scale_y_continuous(limits = c(0.0, 1.0), breaks = seq(0.0, 1.0, by = 0.05))+
+    scale_x_continuous(limits = c(1900, 2023), breaks = seq(1900, 2023, by = 10))+
+    theme(axis.line.x = element_blank(),
+          axis.title.x = element_blank(),
+          axis.text.y = element_blank())+
+    ylab(element_blank())+
+    xlab(element_blank())
+  return(g)
+}
+
+
+# study7: Benin
+df1 <- foimat3[2,]
+foi1 <- plotFOIXY_const(df1)
+# study204: Burkina
+df2 <- foimat12[c(1,3,5,7,9),]
+foi2 <- plotFOIXY_epi5(df2)
+# study149/170: Ethiopia
+df3 <- foimat6[c(1,3),]
+df4 <- foimat1[2,]
+dfethi <- rbind(df3, df4)
+dfethi$model <- c("epi", "epi", "const")
+foi3 <- plotFOIXY_ethi(dfethi)
+
+# study204_2/494: Gabon
+df5 <- foimat7[c(1,3),]
+df6 <- foimat8[c(1,3,5),]
+dfgabon <- rbind(df5,df6)
+dfgabon$model <- c("epi2","epi2", "epi3","epi3","epi3")
+foi4 <- plotFOIXY_gabon(dfgabon)
+
+# study237: Kenya
+df7 <- foimat10[c(1,3,5,7),]
+foi5 <- plotFOIXY_epi4(df7)
+
+# study17/306: Senegal
+df8 <- foimat4[2,]
+df9 <- foimat2[2,]
+dfsenegal <- rbind(df8, df9)
+dfsenegal$model <- c("epi1", "const")
+foi6 <- plotFOIXY_senegal(dfsenegal)
+
+# study106: Zambia
+df10 <- foimat9[c(1,3,5,7),]
+foi7 <- plotFOIXY_zambia(df10)
+
+# study279: Cameroon
+df11 <- foimat11[c(1,3,5,7),]
+foi8 <- plotFOIXY_cameroon(df11)
+
+# study236
+df12 <- foimat5[2,]
+foi9 <- plotFOIXY_epi1(df12)
+
+ssa_foi_v2<-  grid.arrange(foi1, foi2, foi3, 
+                           foi4, foi5, foi6, 
+                           foi7, foi8, foi9, ncol=3,
+                           left = "FoI",
+                           bottom = "Year",
+                           top = "FoI in SSA (non-fever population based studies)")
+ggsave("ssaFOIv2.pdf", ssa_foi_v2, dpi=1000, device= "pdf", height=10, width=13,units="in", bg=NULL)
+
+df12$model <- "NA"
+dflegend <- rbind(dfgabon, df12)
+dflegend$Model <- c("Constant", "Epi1", "Epi2", "Epi3", "Epi4", "Epi5")
+plotFOIXY_legend <- function(df){
+  g <- ggplot(df, aes(x = Year, y = FOI, color = Model))+
+    geom_point()+
+    geom_errorbar(aes(ymin = lo, ymax = hi), width = 0, linewidth = 1, size = 1.5)+
+    scale_color_manual(values = c(Constant = "#FDE725FF", Epi1 = "#B4DE2CFF", Epi2 = "#6DCD59FF",
+                                  Epi3 = "#35B779FF", Epi4 = "#1F9E89FF", Epi5 = "#26828EFF")) +
+    labs(x = "Year", y = "FoI")+ 
+    theme_bw()+
+    facet_wrap(~ country, nrow = 1)+
+    scale_y_continuous(limits = c(0.0, 1.0), breaks = seq(0.0, 1.0, by = 0.05))+
+    scale_x_continuous(limits = c(1900, 2023), breaks = seq(1900, 2023, by = 10))
+    return(g)
+}
+plotFOIXY_legend(dflegend)
+
+
+foiaverage <- rbind(df1[,c(2,5)], df2[,c(2,5)], df3[,c(2,5)],
+                    df4[,c(2,5)], df5[,c(2,5)], df6[,c(2,5)],
+                    df7[,c(2,5)], df8[,c(2,5)], df9[,c(2,5)],
+                    df10[,c(2,5)], df11[,c(2,5)], df12[,c(2,5)])
+
+foiaverage_mid <- foiaverage %>% 
+                    group_by(country) %>%
+                    summarise(FOI = median(FOI))
+foiaverage_mid$long <- c(3.5572267, 0.20273423, 12.601367, )
+foiaverage_mid$lat <- 
+
+world <- map_data("world")
+
+world %>%
+  merge(foiaverage_mid, by.x = "region", by.y = "country", all.x = T) %>%
+  arrange(group, order) %>%
+  ggplot(aes(x = long, y = lat, group = group, fill = FOI)) +
+  #geom_point(aes(x = long, y = lat, color = FOI), size = 3) +
+  geom_polygon(color = "white", size = 0.2) +
+  scale_fill_viridis(name = "Average FoI", na.value = "gray90") +
+  labs(color = "number")+
+  theme_minimal() +
+  theme(axis.text = element_blank(),
+        axis.title = element_blank(),
+        panel.grid = element_blank())
+
+# https://sarahleejane.github.io/learning/r/2014/09/21/plotting-data-points-on-maps-with-r.html
+
+merge <- world %>%
+  merge(foiaverage_mid, by.x = "region", by.y = "country", all.x = T)
+ggplot() +
+  geom_map(
+    data = world, map = world,
+    aes(long, lat, map_id = region),
+    color = "white", fill = "lightgray", size = 0.1
+  ) +
+  geom_point(
+    data = merge,
+    aes(long, lat, color = FOI, alpha = 0.7),
+    alpha = 0.7
+  ) +
+  scale_color_viridis_c(name = "Average FoI")
