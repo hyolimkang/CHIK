@@ -1,0 +1,1531 @@
+---
+title: "averageFOI"
+output: html_document
+date: "2023-07-31"
+---
+
+```{r setup, include=FALSE}
+library(data.table)
+library(dplyr)
+library(MASS)
+library(fitdistrplus)
+library(scales)
+options(scipen = 999)
+```
+
+```{r study 7: Epi1 Benin}
+# senegal
+mcmcMatrix1 <- as.data.table(mcmcMatrix1)
+mcmcMatrix1$max <- 1965
+epidt <- data.table(mcmcMatrix1)
+EpiPeriod1 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod1 <- EpiPeriod1 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand1 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod1$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand1[,j] <- binary_val
+}
+```
+
+```{r study 204_1: Epi5 Burkina Faso}
+# senegal
+mcmcMatrix6 <- as.data.table(mcmcMatrix6)
+epidt <- data.table(mcmcMatrix6)
+EpiPeriod2 <- epidt[, c("dis1", "dis2", "dis3", "dis4", "avg") := .(delta1 - delta2, delta2 - delta3, delta3 - delta4, delta4 - delta5, ((delta1 - delta2) + (delta2 - delta3) + (delta3 - delta4) + (delta4 - delta5))/4)]
+EpiPeriod2 <- EpiPeriod2 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand2 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod2$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand2[,j] <- binary_val
+}
+
+```
+
+```{r study 279: Epi4 Cameroon}
+mcmcMatrix10 <- as.data.table(mcmcMatrix10)
+epidt <- data.table(mcmcMatrix10)
+EpiPeriod3 <- epidt[, c("dis1", "dis2", "dis3", "avg") := .(delta1 - delta2, delta2 - delta3, delta3 - delta4, ((delta1 - delta2) + (delta2 - delta3) + (delta3 - delta4))/2)]
+EpiPeriod3 <- EpiPeriod3 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand3 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod3$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand3[,j] <- binary_val
+}
+
+```
+
+```{r study 236: Epi1 Comoros}
+
+mcmcMatrix8 <- as.data.table(mcmcMatrix8)
+epidt <- data.table(mcmcMatrix8)
+mcmcMatrix8$max <- 1925
+epidt$delta <- as.numeric(epidt$delta)
+epidt$max <- as.numeric(epidt$max)
+EpiPeriod4 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod4 <- EpiPeriod4 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand4 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod4$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand4[,j] <- binary_val
+}
+
+```
+
+```{r study 149: Epi2 Ethiopia (south omo)}
+
+mcmcMatrix4 <- as.data.table(mcmcMatrix4)
+epidt <- data.table(mcmcMatrix4)
+EpiPeriod5 <- epidt[, c("dis1", "avg") := .(delta1 - delta2), (delta1 - delta2)/2]
+EpiPeriod5 <- EpiPeriod5 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand5 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod5$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand5[,j] <- binary_val
+}
+
+```
+
+```{r study 204_2: Epi2 Gabon}
+
+mcmcMatrix7 <- as.data.table(mcmcMatrix7)
+epidt <- data.table(mcmcMatrix7)
+EpiPeriod6 <- epidt[, c("dis1", "avg") := .(delta1 - delta2), (delta1 - delta2)/2]
+EpiPeriod6 <- EpiPeriod5 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand6 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod6$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand6[,j] <- binary_val
+}
+
+```
+
+```{r study 494: Epi3 Gabon}
+
+mcmcMatrix12 <- as.data.table(mcmcMatrix12)
+epidt <- data.table(mcmcMatrix12)
+EpiPeriod7 <- epidt[, c("dis1", "dis2", "avg") := .(delta1 - delta2, delta2 - delta3), ((delta1 - delta2) + (delta2 - delta3))/3]
+EpiPeriod7 <- EpiPeriod7 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand7 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod7$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand7[,j] <- binary_val
+}
+
+```
+
+```{r study 237: Epi4 Kenya (Lamu Island)}
+
+mcmcMatrix9 <- as.data.table(mcmcMatrix9)
+epidt <- data.table(mcmcMatrix9)
+EpiPeriod8 <- epidt[, c("dis1", "dis2", "dis3", "avg") := .(delta1 - delta2, delta2 - delta3, delta3 - delta4), ((delta1 - delta2) + (delta2 - delta3) + (delta3 - delta4))/3]
+EpiPeriod8 <- EpiPeriod8 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand8 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod8$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand8[,j] <- binary_val
+}
+
+```
+
+```{r study 17: Epi1 Senegal (Kedougou)}
+
+mcmcMatrix2 <- as.data.table(mcmcMatrix2)
+epidt <- data.table(mcmcMatrix2)
+mcmcMatrix2$max <- 1932
+epidt$delta <- as.numeric(epidt$delta)
+epidt$max <- as.numeric(epidt$max)
+EpiPeriod9 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod9 <- EpiPeriod9 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand9 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod9$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand9[,j] <- binary_val
+}
+
+```
+
+```{r study 106: Epi4 Zambia}
+mcmcMatrix3 <- as.data.table(mcmcMatrix3)
+epidt <- data.table(mcmcMatrix3)
+mcmcMatrix3$max <- 1932
+EpiPeriod10 <- epidt[, c("dis1", "dis2", "dis3", "avg") := .(delta1 - delta2 , delta2 - delta3, delta3 - delta4), ((delta1 - delta2) + (delta2 - delta3) + (delta3 - delta4))/3]
+EpiPeriod10 <- EpiPeriod10 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand10 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod10$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand10[,j] <- binary_val
+}
+
+```
+
+```{r study 52: Epi1 Brazil}
+mcmcMatrix2 <- as.data.table(mcmcMatrix2)
+mcmcMatrix2$max <- 1946
+epidt <- data.table(mcmcMatrix2)
+EpiPeriod11 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod11 <- EpiPeriod11 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand11 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod11$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand11[,j] <- binary_val
+}
+```
+
+```{r study 165: Epi1 Brazil}
+mcmcMatrix3 <- as.data.table(mcmcMatrix3)
+mcmcMatrix3$max <- 1938
+epidt <- data.table(mcmcMatrix3)
+EpiPeriod12 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod12 <- EpiPeriod12 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand12 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod12$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand12[,j] <- binary_val
+}
+```
+
+```{r study 229: Epi1 Brazil}
+mcmcMatrix5 <- as.data.table(mcmcMatrix5)
+mcmcMatrix5$max <- 1935
+epidt <- data.table(mcmcMatrix5)
+EpiPeriod13 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod13 <- EpiPeriod13 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand13 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod13$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand13[,j] <- binary_val
+}
+```
+
+```{r study 396: Epi1 Brazil}
+mcmcMatrix8 <- as.data.table(mcmcMatrix8)
+mcmcMatrix8$max <- 1937
+epidt <- data.table(mcmcMatrix8)
+EpiPeriod14 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod14 <- EpiPeriod13 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand14 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod14$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand14[,j] <- binary_val
+}
+```
+
+```{r study 406: Epi1 Brazil}
+mcmcMatrix9 <- as.data.table(mcmcMatrix9)
+mcmcMatrix9$max <- 1937
+epidt <- data.table(mcmcMatrix9)
+EpiPeriod15 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod15 <- EpiPeriod13 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand15 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod15$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand15[,j] <- binary_val
+}
+```
+
+```{r study 124: Epi3 Brazil}
+mcmcMatrix12 <- as.data.table(mcmcMatrix12)
+epidt <- data.table(mcmcMatrix12)
+EpiPeriod16 <- epidt[, c("dis1", "dis2", "avg") := .(delta1 - delta2, delta2 - delta3), ((delta1 - delta2) + (delta2 - delta3))/2]
+EpiPeriod16 <- EpiPeriod16 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand16 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod16$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand16[,j] <- binary_val
+}
+
+```
+
+```{r study 153: Epi1 Haiti}
+mcmcMatrix14 <- as.data.table(mcmcMatrix14)
+mcmcMatrix14$max <- 1915
+epidt <- data.table(mcmcMatrix9)
+EpiPeriod17 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod17 <- EpiPeriod17 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand17 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod17$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand17[,j] <- binary_val
+}
+```
+
+```{r study 251: Epi2 Mexico}
+mcmcMatrix10 <- as.data.table(mcmcMatrix10)
+epidt <- data.table(mcmcMatrix10)
+EpiPeriod18 <- epidt[, c("dis1", "avg") := .(delta1 - delta2), (delta1 - delta2)/2]
+EpiPeriod18 <- EpiPeriod18 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand18 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod18$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand18[,j] <- binary_val
+}
+
+```
+
+```{r study 174: Epi4 Nicaragua}
+mcmcMatrix13 <- as.data.table(mcmcMatrix13)
+epidt <- data.table(mcmcMatrix13)
+mcmcMatrix3$max <- 1932
+EpiPeriod19 <- epidt[, c("dis1", "dis2", "dis3", "avg") := .(delta1 - delta2 , delta2 - delta3, delta3 - delta4), ((delta1 - delta2) + (delta2 - delta3) + (delta3 - delta4))/3]
+EpiPeriod19 <- EpiPeriod19 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand19 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod19$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand19[,j] <- binary_val
+}
+
+```
+
+```{r study 179: Epi1 Puertorico}
+mcmcMatrix4 <- as.data.table(mcmcMatrix4)
+mcmcMatrix4$max <- 1937
+epidt <- data.table(mcmcMatrix4)
+EpiPeriod20 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod20 <- EpiPeriod20 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand20 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod20$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand20[,j] <- binary_val
+}
+```
+
+```{r study 260: Epi2 Puerto}
+mcmcMatrix11 <- as.data.table(mcmcMatrix11)
+epidt <- data.table(mcmcMatrix11)
+EpiPeriod21 <- epidt[, c("dis1", "avg") := .(delta1 - delta2), (delta1 - delta2)/2]
+EpiPeriod21 <- EpiPeriod21 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand21 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod21$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand21[,j] <- binary_val
+}
+
+```
+
+```{r study 299: Epi1 VI}
+mcmcMatrix7 <- as.data.table(mcmcMatrix7)
+mcmcMatrix7$max <- 1956
+epidt <- data.table(mcmcMatrix7)
+EpiPeriod22 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod22 <- EpiPeriod22 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand22 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod22$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand22[,j] <- binary_val
+}
+```
+
+```{r study 503: Epi1 Martinique}
+mcmcMatrix15 <- as.data.table(mcmcMatrix15)
+mcmcMatrix15$max <- 1945
+epidt <- data.table(mcmcMatrix15)
+EpiPeriod23 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod23 <- EpiPeriod23 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand23 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod23$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand23[,j] <- binary_val
+}
+```
+
+```{r study 507: Epi1 Martinique}
+mcmcMatrix16 <- as.data.table(mcmcMatrix16)
+mcmcMatrix16$max <- 1933
+epidt <- data.table(mcmcMatrix15)
+EpiPeriod24 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod24 <- EpiPeriod24 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand24 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod24$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand24[,j] <- binary_val
+}
+```
+
+```{r study 281: Epi1 Papua New guinea}
+mcmcMatrix3 <- as.data.table(mcmcMatrix3)
+mcmcMatrix3$max <- 1957
+epidt <- data.table(mcmcMatrix3)
+EpiPeriod25 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod25 <- EpiPeriod25 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand25 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod25$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand25[,j] <- binary_val
+}
+```
+
+```{r study 452: Epi1 Malaysia}
+mcmcMatrix4 <- as.data.table(mcmcMatrix4)
+mcmcMatrix4$max <- 1927
+epidt <- data.table(mcmcMatrix4)
+EpiPeriod26 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod26 <- EpiPeriod26 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand26 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod26$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand26[,j] <- binary_val
+}
+```
+
+```{r study 505_1: Epi1 Fiji}
+mcmcMatrix5 <- as.data.table(mcmcMatrix5)
+mcmcMatrix5$max <- 1928
+epidt <- data.table(mcmcMatrix5)
+EpiPeriod27 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod27 <- EpiPeriod27 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand27 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod27$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand27[,j] <- binary_val
+}
+```
+
+```{r study 277: Epi2 Singapore}
+mcmcMatrix7 <- as.data.table(mcmcMatrix7)
+epidt <- data.table(mcmcMatrix7)
+EpiPeriod28 <- epidt[, c("dis1", "avg") := .(delta1 - delta2), (delta1 - delta2)/2]
+EpiPeriod28 <- EpiPeriod28 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand28 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod28$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand28[,j] <- binary_val
+}
+
+```
+
+```{r study 146: Epi4 Myanmar}
+mcmcMatrix8 <- as.data.table(mcmcMatrix8)
+epidt <- data.table(mcmcMatrix8)
+EpiPeriod29 <- epidt[, c("dis1", "dis2", "dis3", "avg") := .(delta1 - delta2 , delta2 - delta3, delta3 - delta4), ((delta1 - delta2) + (delta2 - delta3) + (delta3 - delta4))/3]
+EpiPeriod29 <- EpiPeriod29 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand29 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod29$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand29[,j] <- binary_val
+}
+
+```
+
+```{r study 423: Epi4 Thailand}
+mcmcMatrix9 <- as.data.table(mcmcMatrix9)
+epidt <- data.table(mcmcMatrix9)
+EpiPeriod30 <- epidt[, c("dis1", "dis2", "dis3", "avg") := .(delta1 - delta2 , delta2 - delta3, delta3 - delta4), ((delta1 - delta2) + (delta2 - delta3) + (delta3 - delta4))/3]
+EpiPeriod30 <- EpiPeriod30 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand30 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod30$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand30[,j] <- binary_val
+}
+
+```
+
+```{r study 234: Epi1 Indonesia}
+mcmcMatrix10 <- as.data.table(mcmcMatrix10)
+mcmcMatrix10$max <- 1922
+epidt <- data.table(mcmcMatrix10)
+EpiPeriod31 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod31 <- EpiPeriod31 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand31 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod31$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand31[,j] <- binary_val
+}
+```
+
+```{r study 197: Epi1 India}
+mcmcMatrix1 <- as.data.table(mcmcMatrix1)
+mcmcMatrix1$max <- 1971
+epidt <- data.table(mcmcMatrix1)
+EpiPeriod32 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod32 <- EpiPeriod32 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand32 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod32$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand32[,j] <- binary_val
+}
+```
+
+```{r study 450_1: Epi3 India}
+mcmcMatrix3 <- as.data.table(mcmcMatrix3)
+epidt <- data.table(mcmcMatrix3)
+EpiPeriod33 <- epidt[, c("dis1", "dis2", "avg") := .(delta1 - delta2, delta2 - delta3), ((delta1 - delta2) + (delta2 - delta3))/2]
+EpiPeriod33 <- EpiPeriod33 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand33 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod33$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand33[,j] <- binary_val
+}
+
+```
+
+```{r study 450_2: Epi3 India}
+mcmcMatrix4 <- as.data.table(mcmcMatrix4)
+epidt <- data.table(mcmcMatrix4)
+EpiPeriod34 <- epidt[, c("dis1", "dis2", "avg") := .(delta1 - delta2, delta2 - delta3), ((delta1 - delta2) + (delta2 - delta3))/2]
+EpiPeriod34 <- EpiPeriod34 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand34 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod34$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand34[,j] <- binary_val
+}
+
+```
+
+```{r study 486: Epi3 India}
+mcmcMatrix5 <- as.data.table(mcmcMatrix5)
+epidt <- data.table(mcmcMatrix5)
+EpiPeriod35 <- epidt[, c("dis1", "dis2", "avg") := .(delta1 - delta2, delta2 - delta3), ((delta1 - delta2) + (delta2 - delta3))/2]
+EpiPeriod35 <- EpiPeriod35 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand35 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod35$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand35[,j] <- binary_val
+}
+
+```
+
+```{r study 249_1: Epi1 India}
+mcmcMatrix6 <- as.data.table(mcmcMatrix6)
+mcmcMatrix6$max <- 1972
+epidt <- data.table(mcmcMatrix6)
+EpiPeriod36 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod36 <- EpiPeriod36 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand36 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod36$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand36[,j] <- binary_val
+}
+```
+
+```{r study 249_2: Epi3 India}
+mcmcMatrix7 <- as.data.table(mcmcMatrix7)
+epidt <- data.table(mcmcMatrix7)
+EpiPeriod37 <- epidt[, c("dis1", "dis2", "avg") := .(delta1 - delta2, delta2 - delta3), ((delta1 - delta2) + (delta2 - delta3))/2]
+EpiPeriod37 <- EpiPeriod37 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand37 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod37$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand37[,j] <- binary_val
+}
+
+```
+
+```{r study 249_3: Epi3 India}
+mcmcMatrix8 <- as.data.table(mcmcMatrix8)
+epidt <- data.table(mcmcMatrix8)
+EpiPeriod38 <- epidt[, c("dis1", "dis2", "avg") := .(delta1 - delta2, delta2 - delta3), ((delta1 - delta2) + (delta2 - delta3))/2]
+EpiPeriod38 <- EpiPeriod38 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand38 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod38$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand38[,j] <- binary_val
+}
+
+```
+
+```{r study 249_4: Epi1 India}
+mcmcMatrix9 <- as.data.table(mcmcMatrix9)
+mcmcMatrix9$max <- 1972
+epidt <- data.table(mcmcMatrix9)
+EpiPeriod39 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod39 <- EpiPeriod39 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand39 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod39$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand39[,j] <- binary_val
+}
+```
+
+```{r study 249_5: Epi1 India}
+mcmcMatrix10 <- as.data.table(mcmcMatrix10)
+mcmcMatrix10$max <- 1972
+epidt <- data.table(mcmcMatrix10)
+EpiPeriod40 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod40 <- EpiPeriod40 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand40 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod40$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand40[,j] <- binary_val
+}
+```
+
+```{r study 249_6: Epi1 India}
+mcmcMatrix11 <- as.data.table(mcmcMatrix11)
+mcmcMatrix11$max <- 1972
+epidt <- data.table(mcmcMatrix11)
+EpiPeriod41 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod41 <- EpiPeriod41 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand41 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod41$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand41[,j] <- binary_val
+}
+```
+
+```{r study 249_7: Epi2 India}
+mcmcMatrix12 <- as.data.table(mcmcMatrix12)
+epidt <- data.table(mcmcMatrix12)
+EpiPeriod42 <- epidt[, c("dis1", "avg") := .(delta1 - delta2), (delta1 - delta2)/2]
+EpiPeriod42 <- EpiPeriod42 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand42 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod42$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand42[,j] <- binary_val
+}
+
+```
+
+```{r study 249_9: Epi3 India}
+mcmcMatrix14 <- as.data.table(mcmcMatrix14)
+epidt <- data.table(mcmcMatrix14)
+EpiPeriod43 <- epidt[, c("dis1", "dis2", "avg") := .(delta1 - delta2, delta2 - delta3), ((delta1 - delta2) + (delta2 - delta3))/2]
+EpiPeriod43 <- EpiPeriod43 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand43 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod43$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand43[,j] <- binary_val
+}
+
+```
+
+```{r study 249_10: Epi3 India}
+mcmcMatrix15 <- as.data.table(mcmcMatrix15)
+epidt <- data.table(mcmcMatrix15)
+EpiPeriod44 <- epidt[, c("dis1", "dis2", "avg") := .(delta1 - delta2, delta2 - delta3), ((delta1 - delta2) + (delta2 - delta3))/2]
+EpiPeriod44 <- EpiPeriod44 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand44 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod44$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand44[,j] <- binary_val
+}
+
+```
+
+```{r study 249_11: Epi3 India}
+mcmcMatrix16 <- as.data.table(mcmcMatrix16)
+epidt <- data.table(mcmcMatrix16)
+EpiPeriod45 <- epidt[, c("dis1", "dis2", "avg") := .(delta1 - delta2, delta2 - delta3), ((delta1 - delta2) + (delta2 - delta3))/2]
+EpiPeriod45 <- EpiPeriod45 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand45 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod45$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand45[,j] <- binary_val
+}
+
+```
+
+```{r study 249_13: Epi3 India}
+mcmcMatrix18 <- as.data.table(mcmcMatrix18)
+epidt <- data.table(mcmcMatrix18)
+EpiPeriod46 <- epidt[, c("dis1", "dis2", "avg") := .(delta1 - delta2, delta2 - delta3), ((delta1 - delta2) + (delta2 - delta3))/2]
+EpiPeriod46 <- EpiPeriod46 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand46 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod46$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand46[,j] <- binary_val
+}
+
+```
+
+```{r study 249_14: Epi3 India}
+mcmcMatrix19 <- as.data.table(mcmcMatrix19)
+epidt <- data.table(mcmcMatrix19)
+EpiPeriod47 <- epidt[, c("dis1", "dis2", "avg") := .(delta1 - delta2, delta2 - delta3), ((delta1 - delta2) + (delta2 - delta3))/2]
+EpiPeriod47 <- EpiPeriod47 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand47 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod47$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand47[,j] <- binary_val
+}
+
+```
+
+```{r study 249_15: Epi1 India}
+mcmcMatrix20 <- as.data.table(mcmcMatrix20)
+mcmcMatrix20$max <- 1972
+epidt <- data.table(mcmcMatrix20)
+EpiPeriod48 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod48 <- EpiPeriod48 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand48 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod48$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand48[,j] <- binary_val
+}
+```
+
+```{r study 32: Epi2 Iran}
+mcmcMatrix4  <- as.data.table(mcmcMatrix4 )
+epidt <- data.table(mcmcMatrix4 )
+EpiPeriod49 <- epidt[, c("dis1", "avg") := .(delta1 - delta2), (delta1 - delta2)/2]
+EpiPeriod49 <- EpiPeriod49 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand49 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod49$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand49[,j] <- binary_val
+}
+
+```
+
+```{r study 154: Epi1 Djibouti}
+mcmcMatrix3 <- as.data.table(mcmcMatrix3)
+mcmcMatrix3$max <- 1931
+epidt <- data.table(mcmcMatrix3)
+EpiPeriod50 <- epidt[, c("dis1", "avg") := .(delta - max), (delta - max)/2]
+EpiPeriod50 <- EpiPeriod50 %>% mutate(inv = 1/avg)
+
+gen_rbinom <- function(x){
+  rbinom(1,1, as.integer(x))
+}
+
+EpiRand50 <- matrix(0, nrow = 100, ncol = 1000)
+
+for(j in 1:1000){
+  binary_val <- rbinom(100, 1, EpiPeriod50$inv)
+  
+  # Store the binary values in the matrix
+  EpiRand50[,j] <- binary_val
+}
+```
+
+
+```{r mean FOI func}
+foimats <- vector("list", 50)
+for(i in 1:50){
+  foimats[[i]] <- matrix(0, nrow = 100, ncol = 1000)  # Initialize the binary matrix with zeros
+}
+
+meanfoi1 <- function(mcmcMatrix, EpiRand, foirand){
+    for (j in 1:ncol(EpiRand)) {
+        lambdaSample <- mcmcMatrix[sample(nrow(mcmcMatrix), 1, replace = TRUE), "lambda"]
+        indices <- which(EpiRand[, j] == 1)
+        lambda_count <- length(indices)
+
+        print(paste("j:", j))
+        print(paste("lambdaSample:", lambdaSample))
+        print(paste("indices:", indices))
+        print(paste("lambda_count:", lambda_count))
+
+       if ((lambda_count - length(lambdaSample)) > 0) {
+            if (lambda_count == 1) {
+                # If there is at least one "1" in the column
+                foirand[indices[1], j] <- lambdaSample[[1]]
+            }else if(lambda_count > 1){
+                foirand[indices[1], j] <- lambdaSample[[1]]
+                foirand[indices[2:lambda_count], j] <-  rep(lambdaSample[[1]], lambda_count-1)
+            }
+        }
+    }
+    return(foirand)
+}
+
+meanfoi2 <- function(mcmcMatrix, EpiRand, foirand) {
+  for (j in 1:ncol(EpiRand)) {
+    lambdaSample <- mcmcMatrix[sample(nrow(mcmcMatrix), 1, replace = TRUE), c("lambda1", "lambda2")]
+    lambdaSample <- unlist(lambdaSample)
+    indices <- which(EpiRand[, j] == 1)
+    lambda_count <- length(indices)  # Count the number of 1's in the jth column
+
+    print(paste("j:", j))
+    print(paste("lambdaSample:", lambdaSample))
+    print(paste("indices:", indices))
+    print(paste("lambda_count:", lambda_count))
+
+    # If the lambda_count is less than or equal to the number of lambdas, fill with lambda values sequentially
+    if (lambda_count <= length(lambdaSample)) {
+      print(paste("In if condition"))
+      print(indices[1:lambda_count])
+      print(lambdaSample[1:lambda_count])
+      foirand[indices[1:lambda_count], j] <- lambdaSample[1:lambda_count]
+    } else {  # If the lambda_count is greater than the number of lambdas
+      # Fill the first positions with available lambdas
+      foirand[indices[1:length(lambdaSample)], j] <- lambdaSample
+      print(paste("First lambdas assigned at indices:", indices[1:length(lambdaSample)]))
+      # The remaining positions are filled with sampled lambda values
+      print(paste("In else condition"))
+      extra_lambda <- sample(lambdaSample, lambda_count - length(lambdaSample), replace = TRUE)
+      
+      if ((lambda_count - length(lambdaSample)) > 0) {
+        print(indices[(length(lambdaSample)+1):lambda_count])
+        print(extra_lambda[1:(lambda_count - length(lambdaSample))])
+        foirand[indices[(length(lambdaSample)+1):lambda_count], j] <- extra_lambda[1:(lambda_count - length(lambdaSample))]
+      }
+    }
+  }
+  return(foirand)
+}
+
+meanfoi3 <- function(mcmcMatrix, EpiRand, foirand) {
+  for (j in 1:ncol(EpiRand)) {
+    lambdaSample <- mcmcMatrix[sample(nrow(mcmcMatrix), 1, replace = TRUE), c("lambda1", "lambda2", "lambda3")]
+    lambdaSample <- unlist(lambdaSample)
+    indices <- which(EpiRand[, j] == 1)
+    lambda_count <- length(indices)  # Count the number of 1's in the jth column
+
+    print(paste("j:", j))
+    print(paste("lambdaSample:", lambdaSample))
+    print(paste("indices:", indices))
+    print(paste("lambda_count:", lambda_count))
+
+    # If the lambda_count is less than or equal to the number of lambdas, fill with lambda values sequentially
+    if (lambda_count <= length(lambdaSample)) {
+      print(paste("In if condition"))
+      print(indices[1:lambda_count])
+      print(lambdaSample[1:lambda_count])
+      foirand[indices[1:lambda_count], j] <- lambdaSample[1:lambda_count]
+    } else {  # If the lambda_count is greater than the number of lambdas
+      # Fill the first positions with available lambdas
+      foirand[indices[1:length(lambdaSample)], j] <- lambdaSample
+      print(paste("First lambdas assigned at indices:", indices[1:length(lambdaSample)]))
+      # The remaining positions are filled with sampled lambda values
+      print(paste("In else condition"))
+      extra_lambda <- sample(lambdaSample, lambda_count - length(lambdaSample), replace = TRUE)
+      
+      if ((lambda_count - length(lambdaSample)) > 0) {
+        print(indices[(length(lambdaSample)+1):lambda_count])
+        print(extra_lambda[1:(lambda_count - length(lambdaSample))])
+        foirand[indices[(length(lambdaSample)+1):lambda_count], j] <- extra_lambda[1:(lambda_count - length(lambdaSample))]
+      }
+    }
+  }
+  return(foirand)
+}
+
+meanfoi4 <- function(mcmcMatrix, EpiRand, foirand) {
+  for (j in 1:ncol(EpiRand)) {
+    lambdaSample <- mcmcMatrix[sample(nrow(mcmcMatrix), 1, replace = TRUE), c("lambda1", "lambda2", "lambda3", "lambda4")]
+    lambdaSample <- unlist(lambdaSample)
+    indices <- which(EpiRand[, j] == 1)
+    lambda_count <- length(indices)  # Count the number of 1's in the jth column
+
+    print(paste("j:", j))
+    print(paste("lambdaSample:", lambdaSample))
+    print(paste("indices:", indices))
+    print(paste("lambda_count:", lambda_count))
+
+    # If the lambda_count is less than or equal to the number of lambdas, fill with lambda values sequentially
+    if (lambda_count <= length(lambdaSample)) {
+      print(paste("In if condition"))
+      print(indices[1:lambda_count])
+      print(lambdaSample[1:lambda_count])
+      foirand[indices[1:lambda_count], j] <- lambdaSample[1:lambda_count]
+    } else {  # If the lambda_count is greater than the number of lambdas
+      # Fill the first positions with available lambdas
+      foirand[indices[1:length(lambdaSample)], j] <- lambdaSample
+      print(paste("First lambdas assigned at indices:", indices[1:length(lambdaSample)]))
+      # The remaining positions are filled with sampled lambda values
+      print(paste("In else condition"))
+      extra_lambda <- sample(lambdaSample, lambda_count - length(lambdaSample), replace = TRUE)
+      
+      if ((lambda_count - length(lambdaSample)) > 0) {
+        print(indices[(length(lambdaSample)+1):lambda_count])
+        print(extra_lambda[1:(lambda_count - length(lambdaSample))])
+        foirand[indices[(length(lambdaSample)+1):lambda_count], j] <- extra_lambda[1:(lambda_count - length(lambdaSample))]
+      }
+    }
+  }
+  return(foirand)
+}
+
+meanfoi5 <- function(mcmcMatrix, EpiRand, foirand) {
+  for (j in 1:ncol(EpiRand)) {
+    lambdaSample <- mcmcMatrix[sample(nrow(mcmcMatrix), 1, replace = TRUE), c("lambda1", "lambda2", "lambda3", "lambda4", "lambda5")]
+    lambdaSample <- unlist(lambdaSample)
+    indices <- which(EpiRand[, j] == 1)
+    lambda_count <- length(indices)  # Count the number of 1's in the jth column
+
+    print(paste("j:", j))
+    print(paste("lambdaSample:", lambdaSample))
+    print(paste("indices:", indices))
+    print(paste("lambda_count:", lambda_count))
+
+    # If the lambda_count is less than or equal to the number of lambdas, fill with lambda values sequentially
+    if (lambda_count <= length(lambdaSample)) {
+      print(paste("In if condition"))
+      print(indices[1:lambda_count])
+      print(lambdaSample[1:lambda_count])
+      foirand[indices[1:lambda_count], j] <- lambdaSample[1:lambda_count]
+    } else {  # If the lambda_count is greater than the number of lambdas
+      # Fill the first positions with available lambdas
+      foirand[indices[1:length(lambdaSample)], j] <- lambdaSample
+      print(paste("First lambdas assigned at indices:", indices[1:length(lambdaSample)]))
+      # The remaining positions are filled with sampled lambda values
+      print(paste("In else condition"))
+      extra_lambda <- sample(lambdaSample, lambda_count - length(lambdaSample), replace = TRUE)
+      
+      if ((lambda_count - length(lambdaSample)) > 0) {
+        print(indices[(length(lambdaSample)+1):lambda_count])
+        print(extra_lambda[1:(lambda_count - length(lambdaSample))])
+        foirand[indices[(length(lambdaSample)+1):lambda_count], j] <- extra_lambda[1:(lambda_count - length(lambdaSample))]
+      }
+    }
+  }
+  return(foirand)
+}
+
+```
+
+```{r results SSA}
+avgfoi7 <- meanfoi1(mcmcMatrix1, EpiRand1, foimats[[1]])
+rmavgfoi7 <- rowMeans(avgfoi7)
+Qavgfoi7 <- quantile(rmavgfoi7, c(0.025, 0.5, 0.975))
+
+avgfoi204_1  <- meanfoi5(mcmcMatrix6, EpiRand2, foimats[[2]])
+rmavgfoi204_1  <- rowMeans(avgfoi204_1)
+Qavgfoi204_1  <- quantile(rmavgfoi204_1, c(0.025, 0.5, 0.975))
+
+avgfoi279  <- meanfoi4(mcmcMatrix10, EpiRand3, foimats[[3]])
+rmavgfoi279  <- rowMeans(avgfoi279)
+Qavgfoi279  <- quantile(rmavgfoi279, c(0.025, 0.5, 0.975))
+
+avgfoi236  <- meanfoi1(mcmcMatrix8, EpiRand4, foimats[[4]])
+rmavgfoi236  <- rowMeans(avgfoi236)
+Qavgfoi236  <- quantile(rmavgfoi236, c(0.025, 0.5, 0.975))
+
+avgfoi149  <- meanfoi2(mcmcMatrix4, EpiRand5, foimats[[5]])
+rmavgfoi149  <- rowMeans(avgfoi149)
+Qavgfoi149  <- quantile(rmavgfoi149, c(0.025, 0.5, 0.975))
+
+avgfoi204_2  <- meanfoi2(mcmcMatrix7, EpiRand6, foimats[[6]])
+rmavgfoi204_2  <- rowMeans(avgfoi204_2)
+Qavgfoi204_2  <- quantile(rmavgfoi204_2, c(0.025, 0.5, 0.975))
+
+avgfoi494  <- meanfoi3(mcmcMatrix12, EpiRand7, foimats[[7]])
+rmavgfoi494  <- rowMeans(avgfoi494)
+Qavgfoi494  <- quantile(rmavgfoi494, c(0.025, 0.5, 0.975))
+
+avgfoi237  <- meanfoi4(mcmcMatrix9, EpiRand8, foimats[[8]])
+rmavgfoi237  <- rowMeans(avgfoi237)
+Qavgfoi237  <- quantile(rmavgfoi237, c(0.025, 0.5, 0.975))
+
+avgfoi17  <- meanfoi1(mcmcMatrix2, EpiRand9, foimats[[9]])
+rmavgfoi17  <- rowMeans(avgfoi17)
+Qavgfoi17  <- quantile(rmavgfoi17, c(0.025, 0.5, 0.975))
+
+avgfoi106  <- meanfoi4(mcmcMatrix3, EpiRand10, foimats[[10]])
+rmavgfoi106  <- rowMeans(avgfoi106)
+Qavgfoi106  <- quantile(rmavgfoi106, c(0.025, 0.5, 0.975))
+
+ssafoilist <- list(Qavgfoi7, Qavgfoi204_1, Qavgfoi279, 
+                   Qavgfoi236, Qavgfoi149, Qavgfoi494,
+                   Qavgfoi204_2, Qavgfoi237, Qavgfoi17,
+                   Qavgfoi106)
+
+ssafoidt <- as.data.table(do.call(rbind, ssafoilist))
+write.csv(ssafoidt, file = "ssafoidt.csv", row.names = FALSE)
+
+save(Qavgfoi7, Qavgfoi204_1, Qavgfoi279, 
+                   Qavgfoi236, Qavgfoi149, Qavgfoi494,
+                   Qavgfoi204_2, Qavgfoi237, Qavgfoi17,
+                   Qavgfoi106, file = "SSAFOIavg.RData")
+
+```
+
+```{r results LAC}
+avgfoi52 <- meanfoi1(mcmcMatrix2, EpiRand11, foimats[[11]])
+rmavgfoi52 <- rowMeans(avgfoi52)
+Qavgfoi52 <- quantile(rmavgfoi52, c(0.025, 0.5, 0.975))
+
+avgfoi165  <- meanfoi1(mcmcMatrix3, EpiRand12, foimats[[12]])
+rmavgfoi165  <- rowMeans(avgfoi165)
+Qavgfoi165  <- quantile(rmavgfoi165, c(0.025, 0.5, 0.975))
+
+avgfoi229  <- meanfoi1(mcmcMatrix5, EpiRand13, foimats[[13]])
+rmavgfoi229  <- rowMeans(avgfoi229)
+Qavgfoi229  <- quantile(rmavgfoi229, c(0.025, 0.5, 0.975))
+
+avgfoi396  <- meanfoi1(mcmcMatrix8, EpiRand14, foimats[[14]])
+rmavgfoi396  <- rowMeans(avgfoi396)
+Qavgfoi396  <- quantile(rmavgfoi396, c(0.025, 0.5, 0.975))
+
+avgfoi406  <- meanfoi1(mcmcMatrix9, EpiRand15, foimats[[15]])
+rmavgfoi406  <- rowMeans(avgfoi406)
+Qavgfoi406  <- quantile(rmavgfoi406, c(0.025, 0.5, 0.975))
+
+avgfoi124  <- meanfoi3(mcmcMatrix12, EpiRand16, foimats[[16]])
+rmavgfoi124  <- rowMeans(avgfoi124)
+Qavgfoi124  <- quantile(rmavgfoi124, c(0.025, 0.5, 0.975))
+
+avgfoi153  <- meanfoi1(mcmcMatrix14, EpiRand17, foimats[[17]])
+rmavgfoi153  <- rowMeans(avgfoi153)
+Qavgfoi153 <- quantile(rmavgfoi153, c(0.025, 0.5, 0.975))
+
+avgfoi251  <- meanfoi2(mcmcMatrix10, EpiRand18, foimats[[18]])
+rmavgfoi251  <- rowMeans(avgfoi251)
+Qavgfoi251  <- quantile(rmavgfoi251, c(0.025, 0.5, 0.975))
+
+avgfoi174  <- meanfoi4(mcmcMatrix13, EpiRand19, foimats[[19]])
+rmavgfoi174  <- rowMeans(avgfoi174)
+Qavgfoi174  <- quantile(rmavgfoi174, c(0.025, 0.5, 0.975))
+
+avgfoi179  <- meanfoi1(mcmcMatrix4, EpiRand20, foimats[[20]])
+rmavgfoi179  <- rowMeans(avgfoi179)
+Qavgfoi179  <- quantile(rmavgfoi179, c(0.025, 0.5, 0.975))
+
+avgfoi260  <- meanfoi2(mcmcMatrix11, EpiRand21, foimats[[21]])
+rmavgfoi260  <- rowMeans(avgfoi260)
+Qavgfoi260  <- quantile(rmavgfoi260, c(0.025, 0.5, 0.975))
+
+avgfoi299  <- meanfoi1(mcmcMatrix7, EpiRand22, foimats[[22]])
+rmavgfoi299  <- rowMeans(avgfoi299)
+Qavgfoi299  <- quantile(rmavgfoi299, c(0.025, 0.5, 0.975))
+
+avgfoi503  <- meanfoi1(mcmcMatrix15, EpiRand23, foimats[[23]])
+rmavgfoi503  <- rowMeans(avgfoi503)
+Qavgfoi503  <- quantile(rmavgfoi503, c(0.025, 0.5, 0.975))
+
+avgfoi507  <- meanfoi1(mcmcMatrix16, EpiRand24, foimats[[24]])
+rmavgfoi507  <- rowMeans(avgfoi507)
+Qavgfoi507  <- quantile(rmavgfoi507, c(0.025, 0.5, 0.975))
+
+lacfoilist <- list(Qavgfoi52, Qavgfoi124, Qavgfoi153, 
+                   Qavgfoi165, Qavgfoi174, Qavgfoi229,
+                   Qavgfoi251, Qavgfoi260, Qavgfoi299,
+                   Qavgfoi396, Qavgfoi406, Qavgfoi503, Qavgfoi507, Qavgfoi179)
+
+lacfoidt <- as.data.table(do.call(rbind, lacfoilist))
+write.csv(lacfoidt, file = "lacfoidt.csv", row.names = FALSE)
+
+
+save(Qavgfoi52, Qavgfoi124, Qavgfoi153, 
+     Qavgfoi165, Qavgfoi174, Qavgfoi229,
+     Qavgfoi251, Qavgfoi260, Qavgfoi299,
+     Qavgfoi396, Qavgfoi406, Qavgfoi503, Qavgfoi507, Qavgfoi179, file = "LACFOIavg.RData")
+
+```
+
+
+```{r results EAP}
+avgfoi281 <- meanfoi1(mcmcMatrix3, EpiRand25, foimats[[25]])
+rmavgfoi281 <- rowMeans(avgfoi281)
+Qavgfoi281 <- quantile(rmavgfoi281, c(0.025, 0.5, 0.975))
+
+avgfoi452  <- meanfoi1(mcmcMatrix4, EpiRand26, foimats[[26]])
+rmavgfoi452  <- rowMeans(avgfoi452)
+Qavgfoi452  <- quantile(rmavgfoi452, c(0.025, 0.5, 0.975))
+
+avgfoi505_1  <- meanfoi1(mcmcMatrix5, EpiRand27, foimats[[27]])
+rmavgfoi505_1  <- rowMeans(avgfoi505_1)
+Qavgfoi505_1  <- quantile(rmavgfoi505_1, c(0.025, 0.5, 0.975))
+
+avgfoi277  <- meanfoi2(mcmcMatrix7, EpiRand28, foimats[[28]])
+rmavgfoi277  <- rowMeans(avgfoi277)
+Qavgfoi277  <- quantile(rmavgfoi277, c(0.025, 0.5, 0.975))
+
+avgfoi146  <- meanfoi4(mcmcMatrix8, EpiRand29, foimats[[29]])
+rmavgfoi146  <- rowMeans(avgfoi146)
+Qavgfoi146  <- quantile(rmavgfoi146, c(0.025, 0.5, 0.975))
+
+avgfoi423  <- meanfoi4(mcmcMatrix9, EpiRand30, foimats[[30]])
+rmavgfoi423  <- rowMeans(avgfoi423)
+Qavgfoi423  <- quantile(rmavgfoi423, c(0.025, 0.5, 0.975))
+
+avgfoi234  <- meanfoi1(mcmcMatrix10, EpiRand31, foimats[[31]])
+rmavgfoi234  <- rowMeans(avgfoi234)
+Qavgfoi234 <- quantile(rmavgfoi234, c(0.025, 0.5, 0.975))
+
+
+eapfoilist <- list(Qavgfoi277, Qavgfoi505_1, Qavgfoi423, 
+                   Qavgfoi146, Qavgfoi281, Qavgfoi234,
+                   Qavgfoi452)
+eapfoidt <- as.data.table(do.call(rbind, eapfoilist))
+write.csv(eapfoidt, file = "eapfoidt.csv", row.names = FALSE)
+
+
+save(Qavgfoi277, Qavgfoi505_1, Qavgfoi423, 
+     Qavgfoi146, Qavgfoi281, Qavgfoi234,
+     Qavgfoi452, file = "EAPFOIavg.RData")
+
+```
+
+```{r results SA}
+avgfoi197  <- meanfoi1(mcmcMatrix1, EpiRand32, foimats[[32]])
+rmavgfoi197 <- rowMeans(avgfoi197)
+Qavgfoi197 <- quantile(rmavgfoi197, c(0.025, 0.5, 0.975))
+
+avgfoi450_1  <- meanfoi3(mcmcMatrix3, EpiRand33, foimats[[33]])
+rmavgfoi450_1  <- rowMeans(avgfoi450_1)
+Qavgfoi450_1  <- quantile(rmavgfoi450_1, c(0.025, 0.5, 0.975))
+
+avgfoi450_2  <- meanfoi3(mcmcMatrix4, EpiRand34, foimats[[34]])
+rmavgfoi450_2  <- rowMeans(avgfoi450_2)
+Qavgfoi450_2  <- quantile(rmavgfoi450_2, c(0.025, 0.5, 0.975))
+
+avgfoi249_1  <- meanfoi1(mcmcMatrix6, EpiRand35, foimats[[35]])
+rmavgfoi249_1  <- rowMeans(avgfoi249_1)
+Qavgfoi249_1  <- quantile(rmavgfoi249_1, c(0.025, 0.5, 0.975))
+
+avgfoi249_2  <- meanfoi3(mcmcMatrix7, EpiRand36, foimats[[36]])
+rmavgfoi249_2  <- rowMeans(avgfoi249_2)
+Qavgfoi249_2  <- quantile(rmavgfoi249_2, c(0.025, 0.5, 0.975))
+
+avgfoi249_3  <- meanfoi3(mcmcMatrix8, EpiRand37, foimats[[37]])
+rmavgfoi249_3  <- rowMeans(avgfoi249_3)
+Qavgfoi249_3  <- quantile(rmavgfoi249_3, c(0.025, 0.5, 0.975))
+
+avgfoi249_4  <- meanfoi1(mcmcMatrix9, EpiRand38, foimats[[38]])
+rmavgfoi249_4  <- rowMeans(avgfoi249_4)
+Qavgfoi249_4 <- quantile(rmavgfoi249_4, c(0.025, 0.5, 0.975))
+
+avgfoi249_5  <- meanfoi1(mcmcMatrix10, EpiRand39, foimats[[39]])
+rmavgfoi249_5  <- rowMeans(avgfoi249_5)
+Qavgfoi249_5 <- quantile(rmavgfoi249_5, c(0.025, 0.5, 0.975))
+
+avgfoi249_6  <- meanfoi1(mcmcMatrix11, EpiRand40, foimats[[40]])
+rmavgfoi249_6  <- rowMeans(avgfoi249_6)
+Qavgfoi249_6 <- quantile(rmavgfoi249_6, c(0.025, 0.5, 0.975))
+
+avgfoi249_7  <- meanfoi2(mcmcMatrix12, EpiRand41, foimats[[41]])
+rmavgfoi249_7  <- rowMeans(avgfoi249_7)
+Qavgfoi249_7 <- quantile(rmavgfoi249_7, c(0.025, 0.5, 0.975))
+
+avgfoi249_9  <- meanfoi3(mcmcMatrix14, EpiRand42, foimats[[42]])
+rmavgfoi249_9  <- rowMeans(avgfoi249_9)
+Qavgfoi249_9 <- quantile(rmavgfoi249_9, c(0.025, 0.5, 0.975))
+
+avgfoi249_10  <- meanfoi3(mcmcMatrix15, EpiRand43, foimats[[43]])
+rmavgfoi249_10  <- rowMeans(avgfoi249_10)
+Qavgfoi249_10 <- quantile(rmavgfoi249_10, c(0.025, 0.5, 0.975))
+
+avgfoi249_11  <- meanfoi3(mcmcMatrix16, EpiRand44, foimats[[44]])
+rmavgfoi249_11  <- rowMeans(avgfoi249_11)
+Qavgfoi249_11 <- quantile(rmavgfoi249_11, c(0.025, 0.5, 0.975))
+
+avgfoi249_13  <- meanfoi3(mcmcMatrix18, EpiRand45, foimats[[45]])
+rmavgfoi249_13  <- rowMeans(avgfoi249_13)
+Qavgfoi249_13 <- quantile(rmavgfoi249_13, c(0.025, 0.5, 0.975))
+
+avgfoi249_14  <- meanfoi3(mcmcMatrix19, EpiRand46, foimats[[46]])
+rmavgfoi249_14  <- rowMeans(avgfoi249_14)
+Qavgfoi249_14 <- quantile(rmavgfoi249_14, c(0.025, 0.5, 0.975))
+
+avgfoi249_15  <- meanfoi1(mcmcMatrix20, EpiRand47, foimats[[47]])
+rmavgfoi249_15  <- rowMeans(avgfoi249_15)
+Qavgfoi249_15 <- quantile(rmavgfoi249_15, c(0.025, 0.5, 0.975))
+
+avgfoi486  <- meanfoi3(mcmcMatrix5, EpiRand48, foimats[[48]])
+rmavgfoi486  <- rowMeans(avgfoi486)
+Qavgfoi486 <- quantile(rmavgfoi486, c(0.025, 0.5, 0.975))
+
+safoilist <- list(Qavgfoi249_15, Qavgfoi197, Qavgfoi486, Qavgfoi249_1,
+                   Qavgfoi249_10, Qavgfoi249_11, Qavgfoi249_13,
+                   Qavgfoi249_14, Qavgfoi249_2, Qavgfoi249_3,
+                   Qavgfoi249_4, Qavgfoi249_5, Qavgfoi249_6, 
+                   Qavgfoi249_7, Qavgfoi249_9, Qavgfoi450_1, Qavgfoi450_2)
+safoidt <- as.data.table(do.call(rbind, safoilist))
+write.csv(safoidt, file = "safoidt.csv", row.names = FALSE)
+
+save(Qavgfoi249_15, Qavgfoi197, Qavgfoi486, Qavgfoi249_1,
+                   Qavgfoi249_10, Qavgfoi249_11, Qavgfoi249_13,
+                   Qavgfoi249_14, Qavgfoi249_2, Qavgfoi249_3,
+                   Qavgfoi249_4, Qavgfoi249_5, Qavgfoi249_6, 
+                   Qavgfoi249_7, Qavgfoi249_9, Qavgfoi450_1, Qavgfoi450_2, file = "SAFOIavg.RData")
+
+```
+
+```{r results ME}
+avgfoi32  <- meanfoi2(mcmcMatrix4, EpiRand49, foimats[[49]])
+rmavgfoi32 <- rowMeans(avgfoi32)
+Qavgfoi32 <- quantile(rmavgfoi32, c(0.025, 0.5, 0.975))
+
+avgfoi154  <- meanfoi1(mcmcMatrix3, EpiRand50, foimats[[50]])
+rmavgfoi154  <- rowMeans(avgfoi154)
+Qavgfoi154  <- quantile(rmavgfoi154, c(0.025, 0.5, 0.975))
+
+mefoilist <- list(Qavgfoi32, Qavgfoi154)
+
+mefoidt <- as.data.table(do.call(rbind, mefoilist))
+write.csv(mefoidt, file = "mefoidt.csv", row.names = FALSE)
+
+```
