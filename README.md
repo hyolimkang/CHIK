@@ -4,6 +4,7 @@ In this systematic review, meta-analysis, and modelling study, we searched PubMe
 ## FoI estimation
 
 1. DIC test for each survey
+
    test both constant and time-varying models for each survey and select a model that has the lowest DIC value. 
    - constant FoI model
    𝑃(𝑎,𝑡)=1 −𝑒𝑥𝑝⁡(−𝜆 ∗𝑎)
