@@ -4,15 +4,14 @@ In this systematic review, meta-analysis, and modelling study, we searched PubMe
 ## FoI estimation
 
 1. DIC test for each survey
+   test both constant and time-varying models for each survey and select a model that has the lowest DIC value. 
    - constant FoI model
    𝑃(𝑎,𝑡)=1 −𝑒𝑥𝑝⁡(−𝜆 ∗𝑎)
-![image](https://github.com/hyolimkang/CHIK/assets/66198338/210b2a18-7454-4904-888f-be5edc1b7175)
-
    - Time-varying FoI model (N epidemics)
-   𝑃(𝑎,𝑡)={█(1 −𝑒𝑥 𝑝⁡(−𝜆_1 ), (𝑡 −𝑎_12<𝛿_1<𝑡)@1 −𝑒𝑥 𝑝⁡(−𝜆_1 〖−𝜆〗_2 ), (𝑡 −𝑎_22  <𝛿_2<𝑡−𝑎_21 )@1 −𝑒𝑥 𝑝⁡(−𝜆_1−𝜆_2 〖−𝜆〗_3 ), (𝑡 −𝑎_32  <𝛿_3<𝑡−𝑎_31 )@…@…@1 −𝑒𝑥 𝑝⁡(−∑_(𝑖=1)^𝑛▒𝜆_𝑖 ), (𝑡 −𝑎_𝑖2  <𝛿_𝑖<𝑡−𝑎_𝑖1 )@…)┤![image](https://github.com/hyolimkang/CHIK/assets/66198338/138294c8-a253-4547-b15f-c59b9cc1695f)
+   𝑃(𝑎,𝑡)= 1 −𝑒𝑥𝑝⁡(−∑_(𝑖=1)^𝑛 𝜆_i)
 
-2. Conduct Bayesian MCMC to generate full-posterior distributions of FoI
-3. Fit seroprevalence curve as below example
+3. Conduct Bayesian MCMC to generate full-posterior distributions of FoI
+4. Fit seroprevalence curve as below example
    - Constant FoI (image1)
    - Time-varying FoI (image2) 
 
