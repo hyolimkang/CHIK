@@ -1302,14 +1302,82 @@ ssafoilist <- list(Qavgfoi7, Qavgfoi204_1, Qavgfoi279,
                    Qavgfoi204_2, Qavgfoi237, Qavgfoi17,
                    Qavgfoi106)
 
+mcmc1<- as.data.frame(colMeans(avgfoi7))
+mcmc1$study_no <- 7
+mcmc1 <- merge(mcmc1, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc1 <- merge(mcmc1, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc2<- as.data.frame(colMeans(avgfoi279))
+mcmc2$study_no <- "204_1"
+mcmc2 <- merge(mcmc2, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc2 <- merge(mcmc2, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc3<- as.data.frame(colMeans(avgfoi204_1))
+mcmc3$study_no <- 279
+mcmc3 <- merge(mcmc3, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc3 <- merge(mcmc3, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc4<- as.data.frame(colMeans(avgfoi236))
+mcmc4$study_no <- 236
+mcmc4 <- merge(mcmc4, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc4 <- merge(mcmc4, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc5<- as.data.frame(colMeans(avgfoi149))
+mcmc5$study_no <- 149
+mcmc5 <- merge(mcmc5, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc5 <- merge(mcmc5, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc6<- as.data.frame(colMeans(avgfoi494))
+mcmc6$study_no <- 494
+mcmc6 <- merge(mcmc6, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc6 <- merge(mcmc6, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc7<- as.data.frame(colMeans(avgfoi204_2))
+mcmc7$study_no <- "204_2"
+mcmc7 <- merge(mcmc7, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc7 <- merge(mcmc7, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc8<- as.data.frame(colMeans(avgfoi237))
+mcmc8$study_no <- 237
+mcmc8 <- merge(mcmc8, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc8 <- merge(mcmc8, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc9<- as.data.frame(colMeans(avgfoi17))
+mcmc9$study_no <- 17
+mcmc9 <- merge(mcmc9, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc9 <- merge(mcmc9, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc10<- as.data.frame(colMeans(avgfoi106))
+mcmc10$study_no <- 106
+mcmc10 <- merge(mcmc10, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc10 <- merge(mcmc10, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc11 <- as.data.frame(mcmcMatrix11)
+mcmc11$study_no <- 306
+mcmc11 <- merge(mcmc11, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc11 <- merge(mcmc11, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc12 <- as.data.frame(mcmcMatrix11)
+mcmc12$study_no <- 306
+mcmc12 <- merge(mcmc12, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc12 <- merge(mcmc12, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc13 <- as.data.frame(mcmcMatrix11)
+mcmc13$study_no <- 306
+mcmc13 <- merge(mcmc13, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc13 <- merge(mcmc13, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc14 <- as.data.frame(mcmcMatrix11)
+mcmc14$study_no <- 306
+mcmc14 <- merge(mcmc14, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc14 <- merge(mcmc14, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc15 <- as.data.frame(mcmcMatrix11)
+mcmc15$study_no <- 306
+mcmc15 <- merge(mcmc15, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc15 <- merge(mcmc15, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc16 <- as.data.frame(mcmcMatrix5)
+mcmc16$study_no <- 170
+mcmc16 <- merge(mcmc16, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc16 <- merge(mcmc16, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+
+ssa_mcmc <- mget(paste0("mcmc", 1:16))
+
 ssafoidt <- as.data.table(do.call(rbind, ssafoilist))
 write.csv(ssafoidt, file = "ssafoidt.csv", row.names = FALSE)
 
 save(Qavgfoi7, Qavgfoi204_1, Qavgfoi279, 
                    Qavgfoi236, Qavgfoi149, Qavgfoi494,
                    Qavgfoi204_2, Qavgfoi237, Qavgfoi17,
-                   Qavgfoi106, file = "SSAFOIavg.RData")
+                   Qavgfoi106, ssa_mcmc, file = "SSAFOIavg.RData")
 
+save(ssa_mcmc, file = "ssa_mcmc.RData")
 ```
 
 ```{r results LAC}
@@ -1374,6 +1442,79 @@ lacfoilist <- list(Qavgfoi52, Qavgfoi124, Qavgfoi153,
                    Qavgfoi251, Qavgfoi260, Qavgfoi299,
                    Qavgfoi396, Qavgfoi406, Qavgfoi503, Qavgfoi507, Qavgfoi179)
 
+mcmc17<- as.data.frame(colMeans(avgfoi52))
+mcmc17$study_no <- 52
+mcmc17 <- merge(mcmc17, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc17 <- merge(mcmc17, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc18<- as.data.frame(colMeans(avgfoi124))
+mcmc18$study_no <- 124
+mcmc18 <- merge(mcmc18, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc18 <- merge(mcmc18, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc19<- as.data.frame(colMeans(avgfoi153))
+mcmc19$study_no <- 153
+mcmc19 <- merge(mcmc19, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc19 <- merge(mcmc19, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc20<- as.data.frame(colMeans(avgfoi165))
+mcmc20$study_no <- 165
+mcmc20 <- merge(mcmc20, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc20 <- merge(mcmc20, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc21<- as.data.frame(colMeans(avgfoi174))
+mcmc21$study_no <- 174
+mcmc21 <- merge(mcmc21, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc21 <- merge(mcmc21, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc22<- as.data.frame(colMeans(avgfoi229))
+mcmc22$study_no <- 229
+mcmc22 <- merge(mcmc22, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc22 <- merge(mcmc22, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc23<- as.data.frame(colMeans(avgfoi251))
+mcmc23$study_no <- 251
+mcmc23 <- merge(mcmc23, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc23 <- merge(mcmc23, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc24<- as.data.frame(colMeans(avgfoi260))
+mcmc24$study_no <- 260
+mcmc24 <- merge(mcmc24, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc24 <- merge(mcmc24, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc25 <- as.data.frame(colMeans(avgfoi299))
+mcmc25$study_no <- 299
+mcmc25 <- merge(mcmc25, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc25 <- merge(mcmc25, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc26 <- as.data.frame(colMeans(avgfoi396))
+mcmc26$study_no <- 396
+mcmc26 <- merge(mcmc26, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc26 <- merge(mcmc26, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc27 <- as.data.frame(colMeans(avgfoi406))
+mcmc27$study_no <- 406
+mcmc27 <- merge(mcmc27, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc27 <- merge(mcmc27, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc28 <- as.data.frame(colMeans(avgfoi503))
+mcmc28$study_no <- 503
+mcmc28 <- merge(mcmc28, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc28 <- merge(mcmc28, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc29 <- as.data.frame(colMeans(avgfoi507))
+mcmc29$study_no <- 507
+mcmc29 <- merge(mcmc29, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc29 <- merge(mcmc29, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc30 <- as.data.frame(colMeans(avgfoi507))
+mcmc30$study_no <- 407
+mcmc30 <- merge(mcmc30, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc30 <- merge(mcmc30, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc31 <- as.data.frame(colMeans(avgfoi179))
+mcmc31$study_no <- 179
+mcmc31 <- merge(mcmc31, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc31 <- merge(mcmc31, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc32 <- as.data.frame(mcmcMatrix6)
+mcmc32$study_no <- 243
+mcmc32 <- merge(mcmc32, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc32 <- merge(mcmc32, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc33 <- as.data.frame(mcmcMatrix1)
+mcmc33$study_no <- 345
+mcmc33 <- merge(mcmc33, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc33 <- merge(mcmc33, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+
+lac_mcmc <- mget(paste0("mcmc", 17:33))
+save(lac_mcmc, file = "lac_mcmc.RData")
+
+
 lacfoidt <- as.data.table(do.call(rbind, lacfoilist))
 write.csv(lacfoidt, file = "lacfoidt.csv", row.names = FALSE)
 
@@ -1419,6 +1560,96 @@ Qavgfoi234 <- quantile(rmavgfoi234, c(0.025, 0.5, 0.975))
 eapfoilist <- list(Qavgfoi277, Qavgfoi505_1, Qavgfoi423, 
                    Qavgfoi146, Qavgfoi281, Qavgfoi234,
                    Qavgfoi452)
+
+mcmc34<- as.data.frame(colMeans(avgfoi277))
+mcmc34$study_no <- 277
+mcmc34 <- merge(mcmc34, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc34 <- merge(mcmc34, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc35<- as.data.frame(colMeans(avgfoi277))
+mcmc35$study_no <- 277
+mcmc35 <- merge(mcmc35, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc35 <- merge(mcmc35, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc36<- as.data.frame(colMeans(avgfoi505_1))
+mcmc36$study_no <- "505_1"
+mcmc36 <- merge(mcmc36, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc36 <- merge(mcmc36, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc37<- as.data.frame(colMeans(avgfoi505_1))
+mcmc37$study_no <- "505_1"
+mcmc37 <- merge(mcmc37, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc37 <- merge(mcmc37, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc38<- as.data.frame(colMeans(avgfoi505_1))
+mcmc38$study_no <- "505_1"
+mcmc38 <- merge(mcmc38, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc38 <- merge(mcmc38, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc39<- as.data.frame(colMeans(avgfoi423))
+mcmc39$study_no <- 423
+mcmc39 <- merge(mcmc39, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc39 <- merge(mcmc39, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc40<- as.data.frame(colMeans(avgfoi423))
+mcmc40$study_no <- 423
+mcmc40 <- merge(mcmc40, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc40 <- merge(mcmc40, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc41<- as.data.frame(colMeans(avgfoi423))
+mcmc41$study_no <- 423
+mcmc41 <- merge(mcmc41, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc41 <- merge(mcmc41, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc42<- as.data.frame(colMeans(avgfoi423))
+mcmc42$study_no <- 423
+mcmc42 <- merge(mcmc42, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc42 <- merge(mcmc42, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc43<- as.data.frame(colMeans(avgfoi146))
+mcmc43$study_no <- 146
+mcmc43 <- merge(mcmc43, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc43 <- merge(mcmc43, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc44 <- as.data.frame(colMeans(avgfoi146))
+mcmc44$study_no <- 146
+mcmc44 <- merge(mcmc44, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc44 <- merge(mcmc44, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc45 <- as.data.frame(colMeans(avgfoi146))
+mcmc45$study_no <- 146
+mcmc45 <- merge(mcmc45, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc45 <- merge(mcmc45, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc46<- as.data.frame(colMeans(avgfoi281))
+mcmc46$study_no <- 281
+mcmc46 <- merge(mcmc46, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc46 <- merge(mcmc46, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc47<- as.data.frame(colMeans(avgfoi234))
+mcmc47$study_no <- 234
+mcmc47 <- merge(mcmc47, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc47 <- merge(mcmc47, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc48<- as.data.frame(colMeans(avgfoi251))
+mcmc48$study_no <- 452
+mcmc48 <- merge(mcmc48, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc48 <- merge(mcmc48, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc49<- as.data.frame(mcmcMatrix1)
+mcmc49$study_no <- 75
+mcmc49 <- merge(mcmc49, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc49 <- merge(mcmc49, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc49<- as.data.frame(mcmcMatrix1)
+mcmc49$study_no <- 75
+mcmc49 <- merge(mcmc49, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc49 <- merge(mcmc49, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc50<- as.data.frame(mcmcMatrix2)
+mcmc50$study_no <- 341
+mcmc50 <- merge(mcmc50, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc50 <- merge(mcmc50, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc51<- as.data.frame(mcmcMatrix2)
+mcmc51$study_no <- 341
+mcmc51 <- merge(mcmc51, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc51 <- merge(mcmc51, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc52 <- as.data.frame(mcmcMatrix2)
+mcmc52$study_no <- 341
+mcmc52 <- merge(mcmc52, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc52 <- merge(mcmc52, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc53<- as.data.frame(mcmcMatrix2)
+mcmc53$study_no <- 341
+mcmc53 <- merge(mcmc53, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc53 <- merge(mcmc53, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+
+
+eap_mcmc <- mget(paste0("mcmc", 34:53))
+save(eap_mcmc, file = "eap_mcmc.RData")
+
 eapfoidt <- as.data.table(do.call(rbind, eapfoilist))
 write.csv(eapfoidt, file = "eapfoidt.csv", row.names = FALSE)
 
@@ -1506,6 +1737,87 @@ safoilist <- list(Qavgfoi249_15, Qavgfoi197, Qavgfoi486, Qavgfoi249_1,
 safoidt <- as.data.table(do.call(rbind, safoilist))
 write.csv(safoidt, file = "safoidt.csv", row.names = FALSE)
 
+mcmc54<- as.data.frame(colMeans(avgfoi249_15))
+mcmc54$study_no <- "249_15"
+mcmc54 <- merge(mcmc54, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc54 <- merge(mcmc54, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc55<- as.data.frame(colMeans(avgfoi197))
+mcmc55$study_no <- 197
+mcmc55 <- merge(mcmc55, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc55 <- merge(mcmc55, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc56<- as.data.frame(colMeans(avgfoi486))
+mcmc56$study_no <- 486
+mcmc56 <- merge(mcmc56, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc56 <- merge(mcmc56, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc57<- as.data.frame(colMeans(avgfoi249_1))
+mcmc57$study_no <- "249_1"
+mcmc57 <- merge(mcmc57, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc57 <- merge(mcmc57, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc58<- as.data.frame(colMeans(avgfoi249_10))
+mcmc58$study_no <- "249_10"
+mcmc58 <- merge(mcmc58, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc58 <- merge(mcmc58, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc59<- as.data.frame(colMeans(avgfoi249_11))
+mcmc59$study_no <- "249_11"
+mcmc59 <- merge(mcmc59, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc59 <- merge(mcmc59, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc60<- as.data.frame(colMeans(avgfoi249_13))
+mcmc60$study_no <- "249_13"
+mcmc60 <- merge(mcmc60, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc60 <- merge(mcmc60, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc61<- as.data.frame(colMeans(avgfoi249_14))
+mcmc61$study_no <- "249_14"
+mcmc61 <- merge(mcmc61, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc61 <- merge(mcmc61, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc62<- as.data.frame(colMeans(avgfoi249_2))
+mcmc62$study_no <- "249_2"
+mcmc62 <- merge(mcmc62, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc62 <- merge(mcmc62, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc63<- as.data.frame(colMeans(avgfoi249_3))
+mcmc63$study_no <- "249_3"
+mcmc63 <- merge(mcmc63, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc63 <- merge(mcmc63, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc64 <- as.data.frame(colMeans(avgfoi249_4))
+mcmc64$study_no <- "249_4"
+mcmc64 <- merge(mcmc64, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc64 <- merge(mcmc64, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc65 <- as.data.frame(colMeans(avgfoi249_5))
+mcmc65$study_no <- "249_5"
+mcmc65 <- merge(mcmc65, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc65 <- merge(mcmc65, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc66<- as.data.frame(colMeans(avgfoi249_6))
+mcmc66$study_no <- "249_6"
+mcmc66 <- merge(mcmc66, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc66 <- merge(mcmc66, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc67<- as.data.frame(colMeans(avgfoi249_7))
+mcmc67$study_no <- "249_7"
+mcmc67 <- merge(mcmc67, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc67 <- merge(mcmc67, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc68<- as.data.frame(colMeans(avgfoi249_9))
+mcmc68$study_no <- "249_9"
+mcmc68 <- merge(mcmc68, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc68 <- merge(mcmc68, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc69<- as.data.frame(colMeans(avgfoi450_1))
+mcmc69$study_no <- "450_1"
+mcmc69 <- merge(mcmc69, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc69 <- merge(mcmc69, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc70<- as.data.frame(colMeans(avgfoi450_2))
+mcmc70$study_no <- "450_2"
+mcmc70 <- merge(mcmc70, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc70 <- merge(mcmc70, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc71<- as.data.frame(mcmcMatrix13)
+mcmc71$study_no <- "249_8"
+mcmc71 <- merge(mcmc71, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc71 <- merge(mcmc71, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc72<- as.data.frame(mcmcMatrix17)
+mcmc72$study_no <- "249_12"
+mcmc72 <- merge(mcmc72, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc72 <- merge(mcmc72, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+
+sa_mcmc <- mget(paste0("mcmc", 54:72))
+save(sa_mcmc, file = "sa_mcmc.RData")
+
+
 save(Qavgfoi249_15, Qavgfoi197, Qavgfoi486, Qavgfoi249_1,
                    Qavgfoi249_10, Qavgfoi249_11, Qavgfoi249_13,
                    Qavgfoi249_14, Qavgfoi249_2, Qavgfoi249_3,
@@ -1524,6 +1836,27 @@ rmavgfoi154  <- rowMeans(avgfoi154)
 Qavgfoi154  <- quantile(rmavgfoi154, c(0.025, 0.5, 0.975))
 
 mefoilist <- list(Qavgfoi32, Qavgfoi154)
+
+mcmc73<- as.data.frame(colMeans(avgfoi32))
+mcmc73$study_no <- 32
+mcmc73 <- merge(mcmc73, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc73 <- merge(mcmc73, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc74<- as.data.frame(colMeans(avgfoi154))
+mcmc74$study_no <- 154
+mcmc74 <- merge(mcmc74, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc74 <- merge(mcmc74, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc75<- as.data.frame(mcmcMatrix2)
+mcmc75$study_no <- 213
+mcmc75 <- merge(mcmc75, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc75 <- merge(mcmc75, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+mcmc76<- as.data.frame(mcmcMatrix1)
+mcmc76$study_no <- 318
+mcmc76 <- merge(mcmc76, chik_foi[c("study_no", "lat")], by = "study_no", all.x = TRUE)
+mcmc76 <- merge(mcmc76, chik_foi[c("study_no", "long")], by = "study_no", all.x = TRUE)
+
+ecame_mcmc <- mget(paste0("mcmc", 73:76))
+save(ecame_mcmc, file = "ecame_mcmc.RData")
+
 
 mefoidt <- as.data.table(do.call(rbind, mefoilist))
 write.csv(mefoidt, file = "mefoidt.csv", row.names = FALSE)
